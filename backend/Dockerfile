@@ -7,4 +7,4 @@ COPY . .
 RUN pip install -e .
 RUN useradd -m app && chown -R app /app
 USER app
-CMD ["sh", "-c", "alembic upgrade head && python -m app.seed && ([ "$SEED_DEMO" = "1" ] && python -m app.seed_demo || true) && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "alembic upgrade head && python -m app.seed && if [ \"$SEED_DEMO\" = \"1\" ]; then python -m app.seed_demo; fi && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
