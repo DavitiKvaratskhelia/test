@@ -22,6 +22,12 @@ class Settings(BaseSettings):
 
     default_city: str = "Tbilisi"
     cors_origins: list[str] = ["http://localhost:3000"]
+    cors_origin_regex: str | None = None
+
+    # DEMO_MODE: ephemeral SQLite + SIMULATED data, for serverless demos only. Data resets on cold start.
+    demo_mode: bool = False
+    demo_user_email: str | None = None
+    demo_user_password: str | None = None
 
 
 settings = Settings()

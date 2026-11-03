@@ -84,9 +84,24 @@ def _courier_view(c: Courier, v: Vehicle | None = None) -> dict:
     }
 
 
+_last_demo_refresh = 0.0
+
+
+def _refresh_demo(db: Session) -> None:
+    """DEMO_MODE only: re-stamp SIMULATED GPS times so freshness classes stay meaningful over time."""
+    global _last_demo_refresh
+    import time
+    from ...seed_demo import seed_demo
+    if time.time() - _last_demo_refresh > 30:
+        _last_demo_refresh = time.time()
+        seed_demo(db)
+
+
 @router.get("/couriers")
 def list_couriers(freshness: str | None = None, vehicle_type: str | None = None, zone: str | None = None,
                   db: Session = Depends(get_db), _: User = Depends(require("fleet:read"))):
+    if settings.demo_mode:
+        _refresh_demo(db)
     q = select(Courier, Vehicle).outerjoin(Vehicle, Vehicle.id == Courier.current_vehicle_id).where(Courier.active)
     if vehicle_type:
         q = q.where(Vehicle.type == vehicle_type)
