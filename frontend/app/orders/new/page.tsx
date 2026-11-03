@@ -55,14 +55,13 @@ function NewOrder() {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 lg:flex-row">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 px-5 pb-5 lg:flex-row">
       <section className="flex w-full flex-col gap-5 lg:w-[520px] lg:shrink-0 lg:overflow-y-auto lg:pr-1">
-        <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold uppercase tracking-wide">{t("place_order")}</h1>
+        <div className="flex items-center justify-end">
           <button aria-label={t("close")} onClick={() => router.push("/")} className="rounded-full border p-2 text-muted hover:bg-surface2">✕</button>
         </div>
 
-        <div className="grid gap-2 rounded-2xl border bg-surface p-2 shadow-sm sm:grid-cols-2">
+        <div className="grid gap-2 rounded-2xl border bg-surface p-2 sm:grid-cols-2">
           <AddressField label={t("where_from")} icon="○" value={from.text} active={active === "from"} onFocus={() => setActive("from")}
             onText={(v) => setFrom({ ...from, text: v })} onSelect={(a) => setFrom({ text: a.address, name: a.name, lat: a.lat, lon: a.lon, phone: a.phone })} />
           <AddressField align="right" label={t("where_to")} icon="◉" value={to.text} active={active === "to"} onFocus={() => setActive("to")}
@@ -84,14 +83,14 @@ function NewOrder() {
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold uppercase tracking-wide">{t("assign_title")}</h2>
+            <h2 className="text-lg font-semibold">{t("assign_title")}</h2>
             <button type="button" className="text-sm text-muted underline" onClick={() => create.mutate(null)} disabled={!from.text.trim() || !to.text.trim() || create.isPending}>{t("choose_later")}</button>
           </div>
-          <div className="overflow-hidden rounded-2xl border bg-surface shadow-sm">
+          <div className="overflow-hidden rounded-2xl border bg-surface">
             <div className="flex items-center justify-between border-b bg-surface2 px-3 py-2 text-sm">
               <div className="flex gap-1">
                 {(["external", "inhouse"] as const).map((k) => (
-                  <button key={k} onClick={() => setTab(k)} className={`rounded-full px-3 py-1 ${tab === k ? "bg-solo text-white" : "text-muted hover:bg-line"}`}>{t(k === "inhouse" ? "in_house" : "external")}</button>
+                  <button key={k} onClick={() => setTab(k)} className={`rounded-full px-3 py-1 ${tab === k ? "bg-brand font-semibold text-brand-on" : "text-muted hover:bg-line"}`}>{t(k === "inhouse" ? "in_house" : "external")}</button>
                 ))}
               </div>
               {tab === "inhouse" && <label className="flex items-center gap-2 text-xs text-muted">{t("cars_only")}<input type="checkbox" checked={carsOnly} onChange={(e) => setCarsOnly(e.target.checked)} /></label>}
@@ -131,9 +130,9 @@ function NewOrder() {
         </div>
 
         <ErrorText error={create.error} />
-        <Button className="w-full py-3 uppercase tracking-wide" disabled={!canSubmit} onClick={() => create.mutate(courierId)}>{t("create_order")}</Button>
+        <Button className="h-12 w-full" disabled={!canSubmit} onClick={() => create.mutate(courierId)}>{t("create_order")}</Button>
       </section>
-      <section className="min-h-[360px] flex-1"><OrderMap from={pt(from)} to={pt(to)} onPick={pick} /></section>
+      <section className="min-h-[360px] flex-1 overflow-hidden rounded-2xl border"><OrderMap from={pt(from)} to={pt(to)} onPick={pick} /></section>
     </div>
   );
 }

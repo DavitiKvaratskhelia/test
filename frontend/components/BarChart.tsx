@@ -18,7 +18,7 @@ export default function BarChart({ data, title }: { data: Bar[]; title: string }
   const pct = (v: number) => (v / axis) * 100;
 
   return (
-    <section aria-label={title} className="rounded-2xl border bg-surface p-5 shadow-sm">
+    <section aria-label={title} className="rounded-2xl border bg-surface p-5">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-semibold">{title}</h2>
         <button className="rounded-full border px-3 py-1 text-xs text-muted hover:bg-surface2" onClick={() => setTable(!table)}>{table ? t("view_chart") : t("view_table")}</button>

@@ -52,7 +52,7 @@ function Dashboard() {
   ].filter((a) => a.show);
 
   return (
-    <main className="space-y-4 p-4">
+    <main className="space-y-4 px-5 pb-5">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <KpiCard icon={<IconBox />} label={t("kpi_total")} value={all.length} sub={t("kpi_sub")} />
         <KpiCard icon={<IconClock />} label={t("kpi_pending")} value={count(["new", "ready"])} />

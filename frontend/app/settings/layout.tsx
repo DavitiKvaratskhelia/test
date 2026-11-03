@@ -21,10 +21,10 @@ function Sidebar() {
   const path = usePathname();
   return (
     <aside className="w-full shrink-0 border-b bg-surface md:w-60 md:border-b-0 md:border-r">
-      <h2 className="px-5 py-4 font-semibold">{t("parameters")}</h2>
+      <h2 className="px-5 pb-2 pt-1 text-xs font-semibold uppercase tracking-wide text-muted">{t("parameters")}</h2>
       <nav className="flex gap-1 overflow-x-auto px-2 pb-2 md:flex-col md:overflow-visible md:pb-0">
         {ITEMS.filter((i) => !i.visible || i.visible(me?.role)).map((i) => (
-          <Link key={i.href} href={i.href} className={`flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm ${path === i.href ? "bg-brand-light font-medium text-brand-text" : "text-ink hover:bg-surface2"}`}>
+          <Link key={i.href} href={i.href} className={`flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm ${path === i.href ? "bg-brand font-medium text-brand-on" : "text-ink hover:bg-surface2"}`}>
             <span aria-hidden>{i.icon}</span>{t(i.key)}
           </Link>
         ))}
@@ -39,7 +39,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
     <AppShell title={t("nav_settings")}>
       <div className="flex min-h-full flex-col md:flex-row">
         <Sidebar />
-        <div className="min-w-0 flex-1 p-4 md:p-8">{children}</div>
+        <div className="min-w-0 flex-1 px-5 pb-8 pt-2">{children}</div>
       </div>
     </AppShell>
   );

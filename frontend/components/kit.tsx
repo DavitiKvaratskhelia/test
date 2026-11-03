@@ -3,7 +3,7 @@ import { Button } from "./ui";
 
 export function KpiCard({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: number | string; sub?: string }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl border bg-surface p-4 shadow-sm">
+    <div className="flex items-center gap-4 rounded-2xl border bg-surface p-4">
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-solo text-white">{icon}</span>
       <div className="min-w-0">
         <div className="truncate text-xs text-muted">{label}</div>

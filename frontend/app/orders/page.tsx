@@ -6,18 +6,12 @@ import { IconDownload } from "@/components/icons";
 import { Avatar, Pagination } from "@/components/kit";
 import { Button, Card, StatusBadge, inputCls } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
+import { downloadCsv } from "@/lib/csv";
 import { useT } from "@/lib/i18n";
 import type { Order } from "@/lib/types";
 
 const PAGE = 10;
 const STATUSES = ["new", "ready", "assigned", "picked_up", "delivered", "failed", "returned", "cancelled"];
-
-/** CSV cell: quote everything and neutralise spreadsheet formulas (=,+,-,@) injected via customer-controlled text. */
-const cell = (v: unknown) => {
-  let s = String(v ?? "");
-  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
-  return `"${s.replace(/"/g, '""')}"`;
-};
 
 function Orders() {
   const { call } = useAuth();
@@ -39,15 +33,13 @@ function Orders() {
 
   const exportCsv = () => {
     const src = sel.length ? rows.filter((o) => sel.includes(o.id)) : rows;
-    const head = ["order_id", "customer", "address", "status", "courier", "zone", "weight_kg", "created_at"];
-    const lines = [head.map(cell).join(",")].concat(src.map((o) => [o.external_id, o.customer_name, o.delivery_address, o.status, o.courier_name, o.zone, o.weight_kg, o.created_at].map(cell).join(",")));
-    const url = URL.createObjectURL(new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" }));
-    const a = document.createElement("a"); a.href = url; a.download = "orders.csv"; a.click(); URL.revokeObjectURL(url);
+    downloadCsv("orders.csv", [["order_id", "customer", "address", "status", "courier", "zone", "weight_kg", "created_at"],
+      ...src.map((o) => [o.external_id, o.customer_name, o.delivery_address, o.status, o.courier_name, o.zone, o.weight_kg, o.created_at])]);
   };
   const allOnPage = shown.length > 0 && shown.every((o) => sel.includes(o.id));
 
   return (
-    <main className="space-y-4 p-4">
+    <main className="space-y-4 px-5 pb-5">
       <div className="flex flex-wrap items-end gap-3">
         <label className="text-xs text-muted">{t("status")}<select className={`${inputCls} mt-1 w-44`} value={status} onChange={(e) => setStatus(e.target.value)}><option value="">{t("all_status")}</option>{STATUSES.map((s) => <option key={s} value={s}>{t(`st_${s}` as Parameters<typeof t>[0])}</option>)}</select></label>
         <label className="text-xs text-muted">{t("zone")}<select className={`${inputCls} mt-1 w-44`} value={zone} onChange={(e) => setZone(e.target.value)}><option value="">{t("all_zones")}</option>{zones.map((z) => <option key={z}>{z}</option>)}</select></label>

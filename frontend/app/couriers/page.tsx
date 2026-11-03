@@ -14,7 +14,7 @@ function Couriers() {
   const { data, isLoading, error } = useQuery({ queryKey: ["couriers"], queryFn: () => call<Courier[]>("/fleet/couriers"), refetchInterval: 15000 });
   const rows = (data ?? []).filter((c) => (!vt || c.vehicle_type === vt) && (!fr || c.freshness === fr));
   return (
-    <main className="space-y-3 p-4">
+    <main className="space-y-3 px-5 pb-5">
             <div className="flex gap-2">
         <select className={`${inputCls} max-w-[200px]`} value={vt} onChange={(e) => setVt(e.target.value)} aria-label={t("vehicle")}>
           <option value="">{t("vehicle")}: {t("all")}</option><option value="car">{t("cars")}</option><option value="scooter">{t("scooters")}</option></select>

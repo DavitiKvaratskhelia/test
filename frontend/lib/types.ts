@@ -9,7 +9,7 @@ export type Courier = {
 
 export type Order = {
   id: number; external_id: string; status: string; delivery_address: string; pickup_address: string;
-  customer_name: string; zone: string; delivery_lat: number | null; delivery_lon: number | null;
+  customer_name: string; customer_phone: string; zone: string; pickup_lat: number | null; pickup_lon: number | null; delivery_lat: number | null; delivery_lon: number | null;
   weight_kg: number; is_simulated: boolean; priority: number; window_end: string | null; courier_name: string | null; created_at: string | null;
 };
 

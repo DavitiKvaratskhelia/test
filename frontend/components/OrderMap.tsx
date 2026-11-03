@@ -29,7 +29,7 @@ function Fit({ from, to }: { from: Pt; to: Pt }) {
 
 export default function OrderMap({ from, to, onPick }: { from: Pt; to: Pt; onPick: (lat: number, lon: number) => void }) {
   return (
-    <MapContainer center={TBILISI} zoom={12} className="h-full w-full rounded-xl" style={{ cursor: "crosshair" }}>
+    <MapContainer center={TBILISI} zoom={12} className="h-full w-full" style={{ cursor: "crosshair" }}>
       <TileLayer attribution={TILE_ATTRIBUTION} url={TILE_URL} maxZoom={19} />
       <Clicks onPick={onPick} /><Fit from={from} to={to} />
       {from && <Marker position={[from.lat, from.lon]} icon={pin("#0F172A", true)} />}

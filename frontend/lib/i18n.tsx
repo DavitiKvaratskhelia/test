@@ -49,6 +49,9 @@ const D = {
     view_table: "Table", view_chart: "Chart", unassigned_courier: "Not assigned",
     step_placed: "Order placed", step_assigned: "Courier assigned", step_transit: "Out for delivery", step_delivered: "Delivered",
     order_details: "Order details", n_orders: "{n} orders", share: "Share",
+    tab_all: "All orders", order_info: "Order info", tracking: "Tracking", layers: "Layers", map_tab: "Map", add_order: "Add order",
+    layer_orders: "Orders", created: "Created", pickup_loc: "Pickup location", delivery_loc: "Delivery location", copied: "Copied", copy_id: "Copy ID",
+    guide_line: "Straight guide line, not a road route.",
     order_created: "Order created", pin_dropped: "Pin", dark_mode: "Dark mode", light_mode: "Light mode", gps_stale: "GPS not live",
   },
   ka: {
@@ -96,6 +99,9 @@ const D = {
     view_table: "ცხრილი", view_chart: "დიაგრამა", unassigned_courier: "მიმაგრებული არ არის",
     step_placed: "შეკვეთა მიღებულია", step_assigned: "კურიერი მიმაგრებულია", step_transit: "გზაშია", step_delivered: "ჩაბარდა",
     order_details: "შეკვეთის დეტალები", n_orders: "{n} შეკვეთა", share: "წილი",
+    tab_all: "ყველა", order_info: "შეკვეთის ინფო", tracking: "თვალყური", layers: "ფენები", map_tab: "რუკა", add_order: "შეკვეთის დამატება",
+    layer_orders: "შეკვეთები", created: "შეიქმნა", pickup_loc: "აყვანის ადგილი", delivery_loc: "მიტანის ადგილი", copied: "დაკოპირდა", copy_id: "ID-ის კოპირება",
+    guide_line: "პირდაპირი ხაზია და არა გზის მარშრუტი.",
     order_created: "შეკვეთა შეიქმნა", pin_dropped: "პინი", dark_mode: "მუქი რეჟიმი", light_mode: "ნათელი რეჟიმი", gps_stale: "GPS არ არის ცოცხალი",
   },
 } as const;

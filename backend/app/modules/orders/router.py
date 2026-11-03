@@ -46,7 +46,7 @@ class OrderIn(BaseModel):
 
 
 def _view(o: Order, courier_name: str | None = None) -> dict:
-    return {"courier_name": courier_name, "created_at": o.created_at, "id": o.id, "source_system": o.source_system, "external_id": o.external_id, "status": o.status,
+    return {"courier_name": courier_name, "customer_phone": o.customer_phone, "pickup_lat": o.pickup_lat, "pickup_lon": o.pickup_lon, "created_at": o.created_at, "id": o.id, "source_system": o.source_system, "external_id": o.external_id, "status": o.status,
             "delivery_address": o.delivery_address, "delivery_lat": o.delivery_lat, "delivery_lon": o.delivery_lon,
             "zone": o.zone, "customer_name": o.customer_name, "pickup_address": o.pickup_address,
             "window_start": o.window_start, "weight_kg": o.weight_kg, "is_simulated": o.is_simulated, "geocode_status": o.geocode_status, "priority": o.priority,
