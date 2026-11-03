@@ -11,6 +11,8 @@ docker compose up --build
 Without Docker: `cd backend && pip install -e ".[dev]" && alembic upgrade head && python -m app.seed && uvicorn app.main:app --reload`
 
 ## Tests
+Demo data (simulated, flagged `is_simulated`): `python -m app.seed_demo` or `SEED_DEMO=1` in `.env` for Docker.
+
 `cd backend && pytest` (SQLite). For the concurrency test and PostGIS-faithful behaviour:
 `TEST_DATABASE_URL=postgresql+psycopg://user:pw@localhost/db pytest`
 

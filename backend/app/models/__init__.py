@@ -66,6 +66,7 @@ class Courier(Base, TimestampMixin):
     zone: Mapped[str] = mapped_column(String(80), default="")
     status: Mapped[str] = mapped_column(String(20), default="offline")  # offline|available|busy|break
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_simulated: Mapped[bool] = mapped_column(Boolean, default=False)
     tracking_consent_at: Mapped[datetime | None] = mapped_column(TS)  # privacy: GPS only after consent
     # denormalised last known position (updated by GPS ingest; see freshness)
     last_lat: Mapped[float | None] = mapped_column(Float)
@@ -80,6 +81,8 @@ class Vehicle(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     plate: Mapped[str] = mapped_column(String(20), unique=True)
     type: Mapped[str] = mapped_column(String(20))  # car | scooter
+    model: Mapped[str] = mapped_column(String(60), default="")  # e.g. marshrutka | combo | prius_v | scooter
+    is_simulated: Mapped[bool] = mapped_column(Boolean, default=False)
     capacity_kg: Mapped[float] = mapped_column(Float, default=0)
     capacity_volume_l: Mapped[float] = mapped_column(Float, default=0)
     cost_per_km: Mapped[float] = mapped_column(Numeric(10, 4), default=0)
@@ -153,6 +156,7 @@ class Order(Base, TimestampMixin):
     window_end: Mapped[datetime | None] = mapped_column(TS)
     zone: Mapped[str] = mapped_column(String(80), default="")
     payload: Mapped[dict] = mapped_column(JSONType, default=dict)
+    is_simulated: Mapped[bool] = mapped_column(Boolean, default=False)
     stops: Mapped[list["OrderStop"]] = relationship(cascade="all, delete-orphan")
     __table_args__ = (
         UniqueConstraint("source_system", "external_id", name="uq_order_external"),
