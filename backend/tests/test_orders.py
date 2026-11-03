@@ -29,14 +29,20 @@ def test_concurrent_sync_creates_one(client):
     assert len({r.json()["id"] for r in res}) == 1
 
 
-def test_update_blocked_after_pickup(client):
+def test_update_blocked_after_pickup(client, db):
+    from app.models import Courier
+    from app.seed_demo import seed_demo
+    seed_demo(db)
     h = login(client, "api_service@z.local")
     disp = login(client, "dispatcher@z.local")
     oid = client.post("/orders/sync", json=ORDER, headers=h).json()["id"]
-    for s in ("ready", "assigned", "picked_up"):
-        assert client.post(f"/orders/{oid}/status", json={"status": s}, headers=disp).status_code == 200
+    c = db.query(Courier).filter(Courier.full_name == "გიორგი მამულაშვილი").one()
+    assert client.post(f"/orders/{oid}/status", json={"status": "ready"}, headers=disp).status_code == 200
+    assert client.post(f"/orders/{oid}/assign", json={"courier_id": c.id}, headers=disp).status_code == 200
+    assert client.post(f"/orders/{oid}/status", json={"status": "picked_up"}, headers=disp).status_code == 200
     client.post("/orders/sync", json={**ORDER, "delivery_address": "CHANGED"}, headers=h)
-    assert client.get("/orders", headers=disp).json()[0]["delivery_address"] != "CHANGED"
+    mine = [o for o in client.get("/orders", headers=disp).json() if o["id"] == oid][0]
+    assert mine["delivery_address"] != "CHANGED"
 
 
 def test_illegal_transition(client):
@@ -78,12 +84,14 @@ def test_manual_order_assigns_courier_and_enforces_capacity(client, db):
     d = login(client, "dispatcher@z.local")
     scooter = db.query(Courier).filter(Courier.full_name == "ანდრია სუხიშვილი").one()   # scooter, 25 kg
     marsh = db.query(Courier).filter(Courier.full_name == "გიორგი მამულაშვილი").one()   # marshrutka, 1500 kg
+    before = db.query(DeliveryAssignment).count()
     heavy = client.post("/orders", json=_manual(client_key="heavy-0001", weight_kg=120, courier_id=scooter.id), headers=d)
     assert heavy.status_code == 409 and "25 kg" in heavy.json()["detail"]
-    assert db.query(DeliveryAssignment).count() == 0          # nothing half-created
+    assert db.query(DeliveryAssignment).count() == before     # nothing half-created
+    marsh_before = db.query(DeliveryAssignment).filter_by(courier_id=marsh.id, active=True).count()
     ok = client.post("/orders", json=_manual(client_key="heavy-0002", weight_kg=120, courier_id=marsh.id), headers=d)
     assert ok.status_code == 201 and ok.json()["status"] == "assigned"
-    assert db.query(DeliveryAssignment).filter_by(courier_id=marsh.id, active=True).count() == 1
+    assert db.query(DeliveryAssignment).filter_by(courier_id=marsh.id, active=True).count() == marsh_before + 1
     assert client.post("/orders", json=_manual(client_key="nobody-0001", courier_id=99999), headers=d).status_code == 422
 
 

@@ -9,7 +9,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .db import SessionLocal
-from .models import Courier, LocationEvent, Order, OrderStop, SavedAddress, Shift, Vehicle, Zone, ZoneCourier
+from .services.geo import haversine_m
+from .models import (AppSetting, Courier, DeliveryAssignment, LocationEvent, Order, OrderStatusEvent, OrderStop, SavedAddress, Shift,
+                     Vehicle, Zone, ZoneCourier)
 
 # Capacities/costs are DEMO ASSUMPTIONS, not manufacturer or Zoommer figures.
 VEHICLE_CLASSES = {
@@ -50,7 +52,7 @@ ORDERS = [
     ("DEMO მომხმარებელი 2", "Saburtalo", "დემო მისამართი, საბურთალო 7", 8.0, "ready", 1),
     ("DEMO მომხმარებელი 3", "Vera", "დემო მისამართი, ვერა 3", 1.2, "assigned", 0),
     ("DEMO მომხმარებელი 4", "Isani", "დემო მისამართი, ისანი 21", 45.0, "assigned", 0),   # large appliance
-    ("DEMO მომხმარებელი 5", "Gldani", "დემო მისამართი, გლდანი 9", 3.0, "picked_up", 0),
+    ("DEMO მომხმარებელი 5", "Gldani", "დემო მისამართი, გლდანი 9", 3.0, "on_the_way", 0),
     ("DEMO მომხმარებელი 6", "Didube", "დემო მისამართი, დიდუბე 15", 120.0, "picked_up", 1),  # fridge/washer
     ("DEMO მომხმარებელი 7", "Varketili", "დემო მისამართი, ვარკეთილი 4", 0.6, "new", 0),
     ("DEMO მომხმარებელი 8", "Old Tbilisi", "დემო მისამართი, ძველი თბილისი 2", 5.5, "delivered", 0),
@@ -76,6 +78,11 @@ DEMO_ADDRESSES = [  # simulated places, fake phone numbers
 ]
 
 
+ORDER_COURIERS = {  # demo order number -> courier (heavy items go to the marshrutkas)
+    3: "ანდრია სუხიშვილი", 4: "დავით ბერიძე", 5: "ლუკა მეტრეველი", 6: "გიორგი მამულაშვილი", 8: "საბა ნოზაძე", 9: "გიგა ჭავჭავაძე",
+}
+
+
 def _jitter(base, i):
     return base[0] + ((i * 37) % 11 - 5) * 0.0011, base[1] + ((i * 53) % 11 - 5) * 0.0013
 
@@ -92,7 +99,8 @@ def seed_demo(db: Session, now: datetime | None = None) -> dict:
             db.flush()
         c = db.scalar(select(Courier).where(Courier.full_name == name, Courier.is_simulated))
         if not c:
-            c = Courier(full_name=name, phone=f"+995 555 000 {100 + i:03d}", branch=branch, zone=zone,
+            first, _, last = name.partition(" ")
+            c = Courier(full_name=name, first_name=first, last_name=last, email=f"demo.courier{i + 1}@example.invalid", phone=f"+995 555 000 {100 + i:03d}", branch=branch, zone=zone,
                         contract_type="employee" if cls != "scooter" else "contractor", is_simulated=True,
                         tracking_consent_at=now, current_vehicle_id=veh.id)
             db.add(c)
@@ -115,6 +123,7 @@ def seed_demo(db: Session, now: datetime | None = None) -> dict:
                     db.add(LocationEvent(courier_id=c.id, vehicle_id=veh.id, lat=lat - k * 0.0006, lon=lon - k * 0.0007,
                                          recorded_at=ts - timedelta(seconds=30 * k), source="simulated",
                                          accuracy_m=6.0, speed_ms=0 if k == 0 else 7.5, is_simulated=True))
+    by_name = {c.full_name: c for c in db.scalars(select(Courier).where(Courier.is_simulated))}
     for i, (cust, zone, addr, kg, status, prio) in enumerate(ORDERS, start=1):
         ext = f"DEMO-{i:04d}"
         if db.scalar(select(Order.id).where(Order.source_system == "demo", Order.external_id == ext)):
@@ -124,27 +133,26 @@ def seed_demo(db: Session, now: datetime | None = None) -> dict:
                   pickup_branch="Demo Hub Saburtalo", pickup_address="Demo Hub Saburtalo",
                   pickup_lat=41.7260, pickup_lon=44.7510, delivery_address=addr, delivery_lat=lat, delivery_lon=lon,
                   geocode_status="provided", weight_kg=kg, volume_l=kg * 8, priority=prio, status=status, zone=zone,
-                  window_start=now, window_end=now + timedelta(hours=2 + i % 3), is_simulated=True,
-                  payload={"simulated": True})
+                  window_start=now, window_end=now + timedelta(hours=2 + i % 3), is_simulated=True, payload={"simulated": True})
+        o.distance_m = round(haversine_m(41.7260, 44.7510, lat, lon))
         o.stops = [OrderStop(kind="pickup", lat=41.7260, lon=44.7510), OrderStop(kind="delivery", lat=lat, lon=lon)]
         db.add(o)
-    db.flush()
-    couriers = {c.zone: [] for c in db.scalars(select(Courier).where(Courier.is_simulated))}
-    for c in db.scalars(select(Courier).where(Courier.is_simulated)):
-        couriers[c.zone].append(c.id)
-    for name, color in DEMO_ZONES:
-        z = db.scalar(select(Zone).where(Zone.name == f"DEMO {name}"))
-        if not z:
-            lat, lon = ZONES[name]
-            z = Zone(name=f"DEMO {name}", polygon=_box(lat, lon), color=color)
-            db.add(z)
-            db.flush()
-            for cid in couriers.get(name, []):
-                db.add(ZoneCourier(zone_id=z.id, courier_id=cid))
-    for i, (nm, addr, zone, details, phone) in enumerate(DEMO_ADDRESSES):
-        if not db.scalar(select(SavedAddress.id).where(SavedAddress.name == nm)):
-            lat, lon = _jitter(ZONES[zone], i + 200)
-            db.add(SavedAddress(name=nm, address=addr, lat=lat, lon=lon, details=details, phone=phone))
+        db.flush()
+        # status history with real timestamps, ending at the order's current status
+        chain = {"new": ["new"], "ready": ["ready"], "assigned": ["ready", "assigned"], "picked_up": ["ready", "assigned", "picked_up"],
+                 "on_the_way": ["ready", "assigned", "picked_up", "on_the_way"], "delivered": ["ready", "assigned", "picked_up", "on_the_way", "delivered"],
+                 "failed": ["ready", "assigned", "picked_up", "on_the_way", "failed"]}[status]
+        t0, prev = now - timedelta(hours=4, minutes=i * 7), None
+        for k, st in enumerate(chain):
+            db.add(OrderStatusEvent(order_id=o.id, from_status=prev, to_status=st, created_at=t0 + timedelta(minutes=25 * k),
+                                    reason="simulated delivery failure: recipient unreachable" if st == "failed" else ""))
+            prev = st
+        o.created_at = t0
+        courier_name = ORDER_COURIERS.get(i)
+        if courier_name and courier_name in by_name:
+            db.add(DeliveryAssignment(order_id=o.id, courier_id=by_name[courier_name].id, mode="manual", reasoning={"source": "demo"}))
+    if not db.get(AppSetting, "payment"):  # demo tariff so the Price column has values (placeholder, not Zoommer's pricing)
+        db.add(AppSetting(key="payment", value={"currency": "GEL", "base_rate": 3.0, "per_km_rate": 0.6}))
     db.commit()
     return {"couriers_created": created, "couriers": len(FLEET), "orders": len(ORDERS)}
 

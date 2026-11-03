@@ -60,6 +60,9 @@ class Courier(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), unique=True)
     full_name: Mapped[str] = mapped_column(String(200))
+    first_name: Mapped[str] = mapped_column(String(100), default="")
+    last_name: Mapped[str] = mapped_column(String(100), default="")
+    email: Mapped[str] = mapped_column(String(255), default="")
     phone: Mapped[str] = mapped_column(String(40), default="")
     contract_type: Mapped[str] = mapped_column(String(30), default="employee")  # employee|contractor
     branch: Mapped[str] = mapped_column(String(80), default="")
@@ -79,7 +82,7 @@ class Courier(Base, TimestampMixin):
 class Vehicle(Base, TimestampMixin):
     __tablename__ = "vehicles"
     id: Mapped[int] = mapped_column(primary_key=True)
-    plate: Mapped[str] = mapped_column(String(20), unique=True)
+    plate: Mapped[str | None] = mapped_column(String(20), unique=True)  # pedestrians/bicycles have none
     type: Mapped[str] = mapped_column(String(20))  # car | scooter
     model: Mapped[str] = mapped_column(String(60), default="")  # e.g. marshrutka | combo | prius_v | scooter
     is_simulated: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -87,7 +90,7 @@ class Vehicle(Base, TimestampMixin):
     capacity_volume_l: Mapped[float] = mapped_column(Float, default=0)
     cost_per_km: Mapped[float] = mapped_column(Numeric(10, 4), default=0)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
-    __table_args__ = (CheckConstraint("type in ('car','scooter')", name="ck_vehicle_type"),)
+    __table_args__ = (CheckConstraint("type in ('car','scooter','bicycle','foot')", name="ck_vehicle_type"),)
 
 
 class GpsDevice(Base, TimestampMixin):
@@ -157,10 +160,13 @@ class Order(Base, TimestampMixin):
     zone: Mapped[str] = mapped_column(String(80), default="")
     payload: Mapped[dict] = mapped_column(JSONType, default=dict)
     is_simulated: Mapped[bool] = mapped_column(Boolean, default=False)
+    version: Mapped[int] = mapped_column(Integer, default=1)       # optimistic concurrency: bumped on every change
+    comment: Mapped[str] = mapped_column(Text, default="")        # internal dispatcher comment
+    distance_m: Mapped[float | None] = mapped_column(Float)       # straight-line pickup→delivery (NOT a road distance)
     stops: Mapped[list["OrderStop"]] = relationship(cascade="all, delete-orphan")
     __table_args__ = (
         UniqueConstraint("source_system", "external_id", name="uq_order_external"),
-        CheckConstraint("status in ('new','ready','assigned','picked_up','delivered','failed','returned','cancelled')",
+        CheckConstraint("status in ('new','ready','assigned','picked_up','on_the_way','delivered','failed','returned','cancelled')",
                         name="ck_order_status"),
     )
 
@@ -420,3 +426,31 @@ class AppSetting(Base):
     value: Mapped[dict] = mapped_column(JSONType, default=dict)
     updated_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     updated_at: Mapped[datetime] = mapped_column(TS, default=utcnow, onupdate=utcnow)
+
+
+class OrderStatusEvent(Base):
+    """One row per status change — powers the order timeline (real timestamps, actor and reason)."""
+    __tablename__ = "order_status_events"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"), index=True)
+    from_status: Mapped[str | None] = mapped_column(String(20))
+    to_status: Mapped[str] = mapped_column(String(20))
+    actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    reason: Mapped[str] = mapped_column(String(300), default="")
+    created_at: Mapped[datetime] = mapped_column(TS, default=utcnow)
+
+
+class PublicLink(Base):
+    """Unguessable, expiring, revocable link for people without an account (customer tracking / "Get the Pin")."""
+    __tablename__ = "public_links"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    token: Mapped[str] = mapped_column(String(64), unique=True)
+    kind: Mapped[str] = mapped_column(String(10))  # track | pin
+    order_id: Mapped[int | None] = mapped_column(ForeignKey("orders.id"), index=True)
+    expires_at: Mapped[datetime] = mapped_column(TS)
+    revoked_at: Mapped[datetime | None] = mapped_column(TS)
+    used_at: Mapped[datetime | None] = mapped_column(TS)
+    payload: Mapped[dict] = mapped_column(JSONType, default=dict)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(TS, default=utcnow)
+    __table_args__ = (CheckConstraint("kind in ('track','pin')", name="ck_public_link_kind"),)

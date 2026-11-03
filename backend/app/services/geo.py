@@ -26,3 +26,11 @@ def point_in_polygon(lat: float, lon: float, ring: list) -> bool:
             inside = not inside
         j = i
     return inside
+
+
+def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle (straight-line) distance in metres."""
+    from math import asin, cos, radians, sin, sqrt
+    dlat, dlon = radians(lat2 - lat1), radians(lon2 - lon1)
+    a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+    return 2 * 6371000 * asin(sqrt(a))

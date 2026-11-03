@@ -14,6 +14,8 @@ class AccountSettings(BaseModel):
     company_name: str = Field(default="Zoommer", max_length=100)
     default_locale: str = Field(default="ka", pattern="^(en|ka)$")
     timezone: str = Field(default="Asia/Tbilisi", max_length=60)
+    company_email: str = Field(default="", max_length=255, pattern=r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    company_phone: str = Field(default="", max_length=40, pattern=r"^[0-9+()\-\s]*$")
 
 
 class DeliverySettings(BaseModel):

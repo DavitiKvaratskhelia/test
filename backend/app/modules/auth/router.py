@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ...core_security import create_token, verify_password
+from ...core_security import create_token, hash_password, verify_password
 from ...db import get_db
 from ...deps import current_user
 from ...models import User
@@ -31,4 +31,27 @@ def login(body: LoginIn, db: Session = Depends(get_db)):
 
 @router.get("/me")
 def me(user: User = Depends(current_user)):
-    return {"id": user.id, "email": user.email, "role": user.role.name, "locale": user.locale}
+    return {"id": user.id, "email": user.email, "role": user.role.name, "locale": user.locale, "full_name": user.full_name}
+
+
+class ProfilePatch(BaseModel):
+    full_name: str | None = None
+    current_password: str | None = None
+    new_password: str | None = None
+
+
+@router.patch("/me")
+def update_me(body: ProfilePatch, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """Own profile only. Changing the password requires the current one."""
+    if body.full_name is not None:
+        user.full_name = body.full_name.strip()[:200]
+    if body.new_password is not None:
+        if len(body.new_password) < 8:
+            raise HTTPException(422, "Password must be at least 8 characters")
+        if not body.current_password or not verify_password(body.current_password, user.password_hash):
+            raise HTTPException(403, "Current password is incorrect")
+        user.password_hash = hash_password(body.new_password)
+    audit.record(db, actor_id=user.id, action="profile_update", entity="user", entity_id=user.id,
+                 detail={"password_changed": body.new_password is not None})
+    db.commit()
+    return {"id": user.id, "email": user.email, "role": user.role.name, "full_name": user.full_name}

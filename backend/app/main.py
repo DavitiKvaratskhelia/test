@@ -13,6 +13,8 @@ from .modules.addresses.router import router as addresses_router
 from .modules.zones.router import router as zones_router
 from .modules.users.router import router as users_router
 from .modules.settings.router import router as settings_router
+from .modules.public.router import router as public_router
+from .modules.pins.router import router as pins_router
 
 logging.basicConfig(level=logging.INFO,
                     format='{"ts":"%(asctime)s","level":"%(levelname)s","logger":"%(name)s","msg":"%(message)s"}')
@@ -28,6 +30,8 @@ app.include_router(addresses_router)
 app.include_router(zones_router)
 app.include_router(users_router)
 app.include_router(settings_router)
+app.include_router(public_router)
+app.include_router(pins_router)
 
 
 @app.get("/health", tags=["ops"])

@@ -19,18 +19,40 @@ router = APIRouter(prefix="/fleet", tags=["fleet"])
 
 class VehicleIn(BaseModel):
     plate: str
-    type: str = Field(pattern="^(car|scooter)$")
+    type: str = Field(pattern="^(car|scooter|bicycle|foot)$")
     capacity_kg: float = 0
     capacity_volume_l: float = 0
     cost_per_km: float = 0
 
 
+# Transport kinds shown in the UI -> (vehicle.type used for filters, vehicle.model, default kg, default litres). Defaults are
+# demo assumptions, not manufacturer figures; the dispatcher can override capacity per courier.
+TRANSPORT = {
+    "pedestrian": ("foot", "pedestrian", 10, 20), "bicycle": ("bicycle", "bicycle", 15, 40), "scooter": ("scooter", "scooter", 25, 60),
+    "combo": ("car", "combo", 600, 3000), "car": ("car", "car", 300, 550), "truck": ("car", "truck", 1500, 9000),
+}
+LEGACY_TRANSPORT = {"marshrutka": "truck", "prius_v": "car"}  # models created by the demo seed
+
+
+def transport_of(v: Vehicle | None) -> str | None:
+    if not v:
+        return None
+    m = v.model or ""
+    return LEGACY_TRANSPORT.get(m) or (m if m in TRANSPORT else None)
+
+
 class CourierIn(BaseModel):
-    full_name: str
-    phone: str = ""
+    first_name: str = Field(min_length=1, max_length=100)
+    last_name: str = Field(default="", max_length=100)
+    email: str = Field(default="", max_length=255, pattern=r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    phone: str = Field(default="", max_length=40, pattern=r"^[0-9+()\-\s]*$")
+    transport: str = Field(default="car", pattern="^(pedestrian|bicycle|scooter|combo|car|truck)$")
+    capacity_kg: float | None = Field(default=None, ge=0, le=100000)
+    capacity_m3: float | None = Field(default=None, ge=0, le=1000)
     contract_type: str = "employee"
     branch: str = ""
     zone: str = ""
+    active: bool = True
 
 
 @router.post("/vehicles", status_code=201)
@@ -47,14 +69,41 @@ def create_vehicle(body: VehicleIn, db: Session = Depends(get_db), user: User = 
     return {"id": v.id, "plate": v.plate, "type": v.type}
 
 
+def _apply_courier(db: Session, c: Courier, body: CourierIn) -> None:
+    c.first_name, c.last_name, c.email, c.phone = body.first_name.strip(), body.last_name.strip(), body.email.strip(), body.phone.strip()
+    c.full_name = f"{c.first_name} {c.last_name}".strip()
+    c.contract_type, c.branch, c.zone, c.active = body.contract_type, body.branch, body.zone, body.active
+    vtype, model, kg, litres = TRANSPORT[body.transport]
+    v = db.get(Vehicle, c.current_vehicle_id) if c.current_vehicle_id else None
+    if v is None:
+        v = Vehicle(plate=None, type=vtype, model=model)
+        db.add(v)
+    v.type, v.model = vtype, model
+    v.capacity_kg = body.capacity_kg if body.capacity_kg is not None else kg
+    v.capacity_volume_l = body.capacity_m3 * 1000 if body.capacity_m3 is not None else litres
+    db.flush()
+    c.current_vehicle_id = v.id
+
+
 @router.post("/couriers", status_code=201)
 def create_courier(body: CourierIn, db: Session = Depends(get_db), user: User = Depends(require("fleet:manage"))):
-    c = Courier(**body.model_dump())
+    c = Courier(full_name=body.first_name)
     db.add(c)
-    db.flush()
+    _apply_courier(db, c, body)
     audit.record(db, actor_id=user.id, action="create", entity="courier", entity_id=c.id)
     db.commit()
-    return {"id": c.id}
+    return _courier_view(c, db.get(Vehicle, c.current_vehicle_id))
+
+
+@router.put("/couriers/{courier_id}")
+def update_courier(courier_id: int, body: CourierIn, db: Session = Depends(get_db), user: User = Depends(require("fleet:manage"))):
+    c = db.get(Courier, courier_id)
+    if not c:
+        raise HTTPException(404, "Courier not found")
+    _apply_courier(db, c, body)
+    audit.record(db, actor_id=user.id, action="update", entity="courier", entity_id=c.id)
+    db.commit()
+    return _courier_view(c, db.get(Vehicle, c.current_vehicle_id))
 
 
 @router.post("/couriers/{courier_id}/consent")
@@ -75,7 +124,8 @@ def _courier_view(c: Courier, v: Vehicle | None = None) -> dict:
     fresh, age = classify(c.last_seen)
     return {
         "id": c.id, "full_name": c.full_name, "status": c.status, "zone": c.zone, "branch": c.branch,
-        "vehicle_type": v.type if v else None, "vehicle_model": v.model if v else None,
+        "first_name": c.first_name, "last_name": c.last_name, "email": c.email, "phone": c.phone, "active": c.active,
+        "transport": transport_of(v), "vehicle_type": v.type if v else None, "vehicle_model": v.model if v else None,
         "plate": v.plate if v else None, "is_simulated": c.is_simulated,
         "capacity_kg": v.capacity_kg if v else None, "capacity_volume_l": v.capacity_volume_l if v else None,
         # position is only reported with its age; offline/unknown positions are flagged, not hidden
@@ -100,10 +150,12 @@ def _refresh_demo(db: Session) -> None:
 
 @router.get("/couriers")
 def list_couriers(freshness: str | None = None, vehicle_type: str | None = None, zone: str | None = None,
-                  db: Session = Depends(get_db), _: User = Depends(require("fleet:read"))):
+                  include_inactive: bool = False, db: Session = Depends(get_db), _: User = Depends(require("fleet:read"))):
     if settings.demo_mode:
         _refresh_demo(db)
-    q = select(Courier, Vehicle).outerjoin(Vehicle, Vehicle.id == Courier.current_vehicle_id).where(Courier.active)
+    q = select(Courier, Vehicle).outerjoin(Vehicle, Vehicle.id == Courier.current_vehicle_id)
+    if not include_inactive:
+        q = q.where(Courier.active)
     if vehicle_type:
         q = q.where(Vehicle.type == vehicle_type)
     if zone:
