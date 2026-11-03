@@ -2,10 +2,9 @@
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useEffect } from "react";
-import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
-import { ageText, Courier, FRESH_COLOR, MODEL_LABEL, OrderPoint } from "@/app/types";
-
-const TBILISI: [number, number] = [41.7151, 44.8271];
+import { MapContainer, Marker, Polygon, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { ageText, Courier, FRESH_COLOR, MODEL_LABEL, Order, Zone } from "@/lib/types";
+import { TBILISI, TILE_ATTRIBUTION, TILE_URL } from "@/lib/map";
 
 function courierIcon(c: Courier, selected: boolean) {
   const color = FRESH_COLOR[c.freshness];
@@ -30,16 +29,18 @@ function FlyTo({ target }: { target: [number, number] | null }) {
   return null;
 }
 
-export default function FleetMap({ couriers, orders, selectedId, onSelect }: {
-  couriers: Courier[]; orders: OrderPoint[]; selectedId: number | null; onSelect: (id: number) => void;
+export default function FleetMap({ couriers, orders, zones, selectedId, onSelect }: {
+  couriers: Courier[]; orders: Order[]; zones: Zone[]; selectedId: number | null; onSelect: (id: number) => void;
 }) {
   const sel = couriers.find((c) => c.id === selectedId)?.last_location;
   return (
-    <MapContainer center={TBILISI} zoom={12} className="h-full w-full rounded-lg" scrollWheelZoom>
-      {/* OSM public tile server: fine for development/low volume. For production use a tile provider or self-host. */}
-      <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" maxZoom={19} />
+    <MapContainer center={TBILISI} zoom={12} className="h-full w-full rounded-xl" scrollWheelZoom>
+      <TileLayer attribution={TILE_ATTRIBUTION} url={TILE_URL} maxZoom={19} />
       <FlyTo target={sel ? [sel.lat, sel.lon] : null} />
+      {zones.map((z) => (
+        <Polygon key={`z${z.id}`} positions={z.polygon.map(([lon, lat]) => [lat, lon] as [number, number])}
+          pathOptions={{ color: z.color, weight: 2, fillOpacity: 0.12 }}><Tooltip sticky>{z.name}</Tooltip></Polygon>
+      ))}
       {orders.filter((o) => o.delivery_lat != null && o.delivery_lon != null).map((o) => (
         <Marker key={`o${o.id}`} position={[o.delivery_lat!, o.delivery_lon!]} icon={orderIcon}>
           <Popup><b>{o.external_id}</b> · {o.status}<br />{o.delivery_address}<br />{o.weight_kg} kg{o.is_simulated && <><br /><i>simulated</i></>}</Popup>
