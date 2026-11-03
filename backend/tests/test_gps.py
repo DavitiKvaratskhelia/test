@@ -82,3 +82,17 @@ def test_courier_cannot_post_for_another(client, db, courier_ctx):
     _, h = courier_ctx
     r = client.post("/fleet/locations", json={"events": [ev(other.id)]}, headers=h).json()["results"][0]
     assert r["reason"] == "not_your_courier_id"
+
+
+def test_courier_list_filters_and_vehicle_info(client, db):
+    from app.seed_demo import seed_demo
+    seed_demo(db)
+    disp = login(client, "dispatcher@z.local")
+    allc = client.get("/fleet/couriers", headers=disp).json()
+    assert len(allc) == 15 and all(c["is_simulated"] for c in allc)
+    sc = client.get("/fleet/couriers?vehicle_type=scooter", headers=disp).json()
+    assert len(sc) == 6 and {c["vehicle_model"] for c in sc} == {"scooter"}
+    assert {c["vehicle_model"] for c in client.get("/fleet/couriers?vehicle_type=car", headers=disp).json()} == {
+        "marshrutka", "combo", "prius_v"}
+    unk = client.get("/fleet/couriers?freshness=unknown", headers=disp).json()
+    assert unk and all(c["last_location"] is None for c in unk)

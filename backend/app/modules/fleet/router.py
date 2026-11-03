@@ -71,10 +71,12 @@ def grant_consent(courier_id: int, db: Session = Depends(get_db), user: User = D
     return {"consent_at": c.tracking_consent_at}
 
 
-def _courier_view(c: Courier) -> dict:
+def _courier_view(c: Courier, v: Vehicle | None = None) -> dict:
     fresh, age = classify(c.last_seen)
     return {
         "id": c.id, "full_name": c.full_name, "status": c.status, "zone": c.zone, "branch": c.branch,
+        "vehicle_type": v.type if v else None, "vehicle_model": v.model if v else None,
+        "plate": v.plate if v else None, "is_simulated": c.is_simulated,
         # position is only reported with its age; offline/unknown positions are flagged, not hidden
         "last_location": None if c.last_lat is None else {"lat": c.last_lat, "lon": c.last_lon},
         "last_seen": c.last_seen, "age_seconds": age, "freshness": fresh.value,
@@ -83,9 +85,14 @@ def _courier_view(c: Courier) -> dict:
 
 
 @router.get("/couriers")
-def list_couriers(freshness: str | None = None, db: Session = Depends(get_db),
-                  _: User = Depends(require("fleet:read"))):
-    out = [_courier_view(c) for c in db.scalars(select(Courier).where(Courier.active))]
+def list_couriers(freshness: str | None = None, vehicle_type: str | None = None, zone: str | None = None,
+                  db: Session = Depends(get_db), _: User = Depends(require("fleet:read"))):
+    q = select(Courier, Vehicle).outerjoin(Vehicle, Vehicle.id == Courier.current_vehicle_id).where(Courier.active)
+    if vehicle_type:
+        q = q.where(Vehicle.type == vehicle_type)
+    if zone:
+        q = q.where(Courier.zone == zone)
+    out = [_courier_view(c, v) for c, v in db.execute(q)]
     return [c for c in out if freshness is None or c["freshness"] == freshness]
 
 

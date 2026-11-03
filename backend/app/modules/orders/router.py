@@ -44,7 +44,8 @@ class OrderIn(BaseModel):
 
 def _view(o: Order) -> dict:
     return {"id": o.id, "source_system": o.source_system, "external_id": o.external_id, "status": o.status,
-            "delivery_address": o.delivery_address, "geocode_status": o.geocode_status, "priority": o.priority,
+            "delivery_address": o.delivery_address, "delivery_lat": o.delivery_lat, "delivery_lon": o.delivery_lon,
+            "zone": o.zone, "weight_kg": o.weight_kg, "is_simulated": o.is_simulated, "geocode_status": o.geocode_status, "priority": o.priority,
             "window_end": o.window_end}
 
 
