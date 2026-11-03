@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 
 from ...db import get_db
 from ...deps import require
-from ...models import IntegrationEvent, Order, OrderStop, User
+from ...models import IntegrationEvent, Order, OrderStop, User, Zone
+from ...services.geo import point_in_polygon
 from ...services import audit
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -45,7 +46,8 @@ class OrderIn(BaseModel):
 def _view(o: Order) -> dict:
     return {"id": o.id, "source_system": o.source_system, "external_id": o.external_id, "status": o.status,
             "delivery_address": o.delivery_address, "delivery_lat": o.delivery_lat, "delivery_lon": o.delivery_lon,
-            "zone": o.zone, "weight_kg": o.weight_kg, "is_simulated": o.is_simulated, "geocode_status": o.geocode_status, "priority": o.priority,
+            "zone": o.zone, "customer_name": o.customer_name, "pickup_address": o.pickup_address,
+            "window_start": o.window_start, "weight_kg": o.weight_kg, "is_simulated": o.is_simulated, "geocode_status": o.geocode_status, "priority": o.priority,
             "window_end": o.window_end}
 
 
@@ -53,6 +55,11 @@ def _create(db: Session, body: OrderIn) -> Order:
     d = body.model_dump()
     has_coords = d["delivery_lat"] is not None and d["delivery_lon"] is not None
     o = Order(**d, geocode_status="provided" if has_coords else "pending", payload=body.model_dump(mode="json"))
+    if has_coords and not o.zone:  # assign the first active zone that contains the delivery point
+        for z in db.scalars(select(Zone).where(Zone.active).order_by(Zone.id)):
+            if point_in_polygon(o.delivery_lat, o.delivery_lon, z.polygon):
+                o.zone = z.name
+                break
     o.stops = [OrderStop(kind="pickup", lat=o.pickup_lat, lon=o.pickup_lon),
                OrderStop(kind="delivery", lat=o.delivery_lat, lon=o.delivery_lon)]
     db.add(o)

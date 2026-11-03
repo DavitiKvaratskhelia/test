@@ -32,6 +32,12 @@ PERMISSIONS: dict[str, set[Role]] = {
     "analytics:read": {Role.ADMIN, Role.FINANCE, Role.OPS},
     "audit:read": {Role.ADMIN},
     "users:manage": {Role.ADMIN},
+    "addresses:read": {Role.ADMIN, Role.DISPATCHER, Role.OPS},
+    "addresses:write": {Role.ADMIN, Role.DISPATCHER, Role.OPS},
+    "zones:read": {Role.ADMIN, Role.DISPATCHER, Role.OPS},
+    "zones:write": {Role.ADMIN, Role.OPS},
+    "settings:read": {Role.ADMIN, Role.DISPATCHER, Role.OPS, Role.FINANCE},
+    "settings:write": {Role.ADMIN, Role.OPS},
 }
 
 

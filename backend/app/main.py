@@ -9,6 +9,10 @@ from .db import engine
 from .modules.auth.router import router as auth_router
 from .modules.fleet.router import router as fleet_router
 from .modules.orders.router import router as orders_router
+from .modules.addresses.router import router as addresses_router
+from .modules.zones.router import router as zones_router
+from .modules.users.router import router as users_router
+from .modules.settings.router import router as settings_router
 
 logging.basicConfig(level=logging.INFO,
                     format='{"ts":"%(asctime)s","level":"%(levelname)s","logger":"%(name)s","msg":"%(message)s"}')
@@ -20,6 +24,10 @@ app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_or
 app.include_router(auth_router)
 app.include_router(fleet_router)
 app.include_router(orders_router)
+app.include_router(addresses_router)
+app.include_router(zones_router)
+app.include_router(users_router)
+app.include_router(settings_router)
 
 
 @app.get("/health", tags=["ops"])

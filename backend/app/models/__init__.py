@@ -381,3 +381,42 @@ class AuditLog(Base):
     entity_id: Mapped[str | None] = mapped_column(String(60))
     detail: Mapped[dict] = mapped_column(JSONType, default=dict)
     created_at: Mapped[datetime] = mapped_column(TS, default=utcnow, index=True)
+
+
+# ---------- dispatcher configuration ----------
+class SavedAddress(Base, TimestampMixin):
+    """Frequently used pickup/delivery points (branches, warehouses, regular customers)."""
+    __tablename__ = "saved_addresses"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(200))
+    address: Mapped[str] = mapped_column(String(300))
+    lat: Mapped[float | None] = mapped_column(Float)
+    lon: Mapped[float | None] = mapped_column(Float)
+    details: Mapped[str] = mapped_column(String(300), default="")  # entrance, floor, apartment
+    phone: Mapped[str] = mapped_column(String(40), default="")
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    __table_args__ = (Index("ix_saved_addresses_name", "name"),)
+
+
+class Zone(Base, TimestampMixin):
+    """Operational area drawn by a dispatcher. polygon = GeoJSON-style ring [[lon, lat], ...], not closed."""
+    __tablename__ = "zones"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), unique=True)
+    polygon: Mapped[list] = mapped_column(JSONType)
+    color: Mapped[str] = mapped_column(String(9), default="#F26A1B")
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class ZoneCourier(Base):
+    __tablename__ = "zone_couriers"
+    zone_id: Mapped[int] = mapped_column(ForeignKey("zones.id", ondelete="CASCADE"), primary_key=True)
+    courier_id: Mapped[int] = mapped_column(ForeignKey("couriers.id", ondelete="CASCADE"), primary_key=True)
+
+
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+    key: Mapped[str] = mapped_column(String(40), primary_key=True)
+    value: Mapped[dict] = mapped_column(JSONType, default=dict)
+    updated_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    updated_at: Mapped[datetime] = mapped_column(TS, default=utcnow, onupdate=utcnow)

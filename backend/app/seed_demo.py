@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .db import SessionLocal
-from .models import Courier, LocationEvent, Order, OrderStop, Shift, Vehicle
+from .models import Courier, LocationEvent, Order, OrderStop, SavedAddress, Shift, Vehicle, Zone, ZoneCourier
 
 # Capacities/costs are DEMO ASSUMPTIONS, not manufacturer or Zoommer figures.
 VEHICLE_CLASSES = {
@@ -56,6 +56,23 @@ ORDERS = [
     ("DEMO მომხმარებელი 8", "Old Tbilisi", "დემო მისამართი, ძველი თბილისი 2", 5.5, "delivered", 0),
     ("DEMO მომხმარებელი 9", "Vake", "დემო მისამართი, ვაკე 30", 2.0, "failed", 0),
     ("DEMO მომხმარებელი 10", "Saburtalo", "დემო მისამართი, საბურთალო 44", 15.0, "ready", 2),
+]
+
+
+def _box(lat, lon, dlat=0.014, dlon=0.02):
+    """Rough rectangular DEMO zone around a district centre, as a [lon, lat] ring."""
+    return [[lon - dlon, lat - dlat], [lon + dlon, lat - dlat], [lon + dlon, lat + dlat], [lon - dlon, lat + dlat]]
+
+
+DEMO_ZONES = [("Vake", "#F26A1B"), ("Saburtalo", "#2563EB"), ("Gldani", "#16A34A"), ("Varketili", "#9333EA"),
+              ("Isani", "#DB2777")]
+
+DEMO_ADDRESSES = [  # simulated places, fake phone numbers
+    ("DEMO Hub Saburtalo", "დემო მისამართი, საბურთალო", "Saburtalo", "Entrance 1, floor 2", "+995 555 000 901"),
+    ("DEMO Hub Didube", "დემო მისამართი, დიდუბე", "Didube", "Warehouse gate B", "+995 555 000 902"),
+    ("DEMO Hub Isani", "დემო მისამართი, ისანი", "Isani", "", "+995 555 000 903"),
+    ("DEMO Customer Vake", "დემო მისამართი, ვაკე", "Vake", "Entrance 3, floor 5, apt 21", "+995 555 000 904"),
+    ("DEMO Customer Vera", "დემო მისამართი, ვერა", "Vera", "Floor 1", "+995 555 000 905"),
 ]
 
 
@@ -111,6 +128,23 @@ def seed_demo(db: Session, now: datetime | None = None) -> dict:
                   payload={"simulated": True})
         o.stops = [OrderStop(kind="pickup", lat=41.7260, lon=44.7510), OrderStop(kind="delivery", lat=lat, lon=lon)]
         db.add(o)
+    db.flush()
+    couriers = {c.zone: [] for c in db.scalars(select(Courier).where(Courier.is_simulated))}
+    for c in db.scalars(select(Courier).where(Courier.is_simulated)):
+        couriers[c.zone].append(c.id)
+    for name, color in DEMO_ZONES:
+        z = db.scalar(select(Zone).where(Zone.name == f"DEMO {name}"))
+        if not z:
+            lat, lon = ZONES[name]
+            z = Zone(name=f"DEMO {name}", polygon=_box(lat, lon), color=color)
+            db.add(z)
+            db.flush()
+            for cid in couriers.get(name, []):
+                db.add(ZoneCourier(zone_id=z.id, courier_id=cid))
+    for i, (nm, addr, zone, details, phone) in enumerate(DEMO_ADDRESSES):
+        if not db.scalar(select(SavedAddress.id).where(SavedAddress.name == nm)):
+            lat, lon = _jitter(ZONES[zone], i + 200)
+            db.add(SavedAddress(name=nm, address=addr, lat=lat, lon=lon, details=details, phone=phone))
     db.commit()
     return {"couriers_created": created, "couriers": len(FLEET), "orders": len(ORDERS)}
 

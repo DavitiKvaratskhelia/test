@@ -3,7 +3,7 @@ name = "zoommer-logistics"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
-  "fastapi>=0.110", "uvicorn[standard]", "sqlalchemy>=2.0", "alembic", "psycopg[binary]",
+  "fastapi>=0.110", "email-validator", "uvicorn[standard]", "sqlalchemy>=2.0", "alembic", "psycopg[binary]",
   "pydantic-settings", "pyjwt", "cryptography", "ortools", "redis", "celery",
 ]
 [project.optional-dependencies]
