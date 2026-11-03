@@ -3,14 +3,14 @@ export type Freshness = "realtime" | "delayed" | "offline" | "unknown";
 export type Courier = {
   id: number; full_name: string; status: string; zone: string; branch: string;
   vehicle_type: "car" | "scooter" | null; vehicle_model: string | null; plate: string | null;
-  is_simulated: boolean; freshness: Freshness; age_seconds: number | null;
+  is_simulated: boolean; capacity_kg: number | null; capacity_volume_l: number | null; freshness: Freshness; age_seconds: number | null;
   last_location: { lat: number; lon: number } | null; source: string | null;
 };
 
 export type Order = {
   id: number; external_id: string; status: string; delivery_address: string; pickup_address: string;
   customer_name: string; zone: string; delivery_lat: number | null; delivery_lon: number | null;
-  weight_kg: number; is_simulated: boolean; priority: number; window_end: string | null;
+  weight_kg: number; is_simulated: boolean; priority: number; window_end: string | null; courier_name: string | null; created_at: string | null;
 };
 
 export type Zone = { id: number; name: string; polygon: number[][]; color: string; active: boolean; courier_ids: number[] };

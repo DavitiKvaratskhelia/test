@@ -7,7 +7,7 @@ import { can, useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
 import type { Courier, Zone } from "@/lib/types";
 
-const ZoneEditor = dynamic(() => import("@/components/ZoneEditor"), { ssr: false, loading: () => <div className="h-[55vh] animate-pulse rounded-xl bg-neutral-200" /> });
+const ZoneEditor = dynamic(() => import("@/components/ZoneEditor"), { ssr: false, loading: () => <div className="h-[55vh] animate-pulse rounded-xl bg-line" /> });
 const COLORS = ["#F26A1B", "#2563EB", "#16A34A", "#9333EA", "#DB2777", "#0891B2"];
 
 /** Lightweight SVG preview of a polygon (no tile requests, so cards stay cheap). */
@@ -17,7 +17,7 @@ function Preview({ polygon, color }: { polygon: number[][]; color: string }) {
   const w = maxX - minX || 1, h = maxY - minY || 1, s = 160 / Math.max(w, h);
   const pts = polygon.map(([x, y]) => `${10 + (x - minX) * s},${10 + (maxY - y) * s}`).join(" ");
   return (
-    <svg viewBox={`0 0 ${20 + w * s} ${20 + h * s}`} className="h-28 w-full bg-neutral-50" role="img" aria-label="zone shape">
+    <svg viewBox={`0 0 ${20 + w * s} ${20 + h * s}`} className="h-28 w-full bg-surface2" role="img" aria-label="zone shape">
       <polygon points={pts} fill={color} fillOpacity="0.25" stroke={color} strokeWidth="2" />
     </svg>
   );
@@ -42,17 +42,17 @@ function EditorModal({ zone, zones, onClose }: { zone?: Zone; zones: Zone[]; onC
         <div className="flex flex-wrap items-end gap-3">
           <div className="w-64"><Field label={t("zone_name")}><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} /></Field></div>
           <Field label={t("color")}>
-            <span className="flex gap-1.5">{COLORS.map((c) => <button type="button" key={c} aria-label={c} onClick={() => setColor(c)} className={`h-8 w-8 rounded-full border-2 ${color === c ? "border-neutral-900" : "border-white shadow"}`} style={{ background: c }} />)}</span>
+            <span className="flex gap-1.5">{COLORS.map((c) => <button type="button" key={c} aria-label={c} onClick={() => setColor(c)} className={`h-8 w-8 rounded-full border-2 ${color === c ? "border-ink" : "border-white shadow"}`} style={{ background: c }} />)}</span>
           </Field>
           <Button variant="secondary" disabled={points.length === 0} onClick={() => setPoints(points.slice(0, -1))}>{t("undo")}</Button>
           <Button variant="secondary" disabled={points.length === 0} onClick={() => setPoints([])}>{t("clear")}</Button>
-          <span className="text-sm text-neutral-500" data-testid="point-count">{points.length}</span>
+          <span className="text-sm text-muted" data-testid="point-count">{points.length}</span>
         </div>
-        <p className="text-xs text-neutral-500">{t("zone_hint")}</p>
+        <p className="text-xs text-muted">{t("zone_hint")}</p>
         <div className="relative">
           <ZoneEditor points={points} color={color} others={others} onAdd={(p) => setPoints((s) => [...s, p])} />
           {zones.filter((z) => z.id !== zone?.id).length > 0 && (
-            <div className="absolute bottom-3 right-3 z-[1000] space-y-1 rounded-lg border bg-white/95 p-2 text-xs shadow">
+            <div className="absolute bottom-3 right-3 z-[1000] space-y-1 rounded-lg border bg-surface/95 p-2 text-xs shadow">
               {zones.filter((z) => z.id !== zone?.id).map((z) => (
                 <label key={z.id} className="flex items-center gap-2"><input type="checkbox" checked={!hidden.includes(z.id)} onChange={() => setHidden((h) => h.includes(z.id) ? h.filter((x) => x !== z.id) : [...h, z.id])} />{z.name}</label>
               ))}
@@ -81,9 +81,9 @@ function CouriersModal({ zone, onClose }: { zone: Zone; onClose: () => void }) {
       <div className="space-y-3">
         <ul className="max-h-72 space-y-1 overflow-y-auto">
           {(data ?? []).map((c) => (
-            <li key={c.id}><label className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-neutral-50">
+            <li key={c.id}><label className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-surface2">
               <input type="checkbox" checked={sel.includes(c.id)} onChange={() => setSel((s) => s.includes(c.id) ? s.filter((x) => x !== c.id) : [...s, c.id])} />{c.full_name}
-              <span className="text-xs text-neutral-400">{c.zone}</span></label></li>
+              <span className="text-xs text-muted">{c.zone}</span></label></li>
           ))}
         </ul>
         <ErrorText error={save.error} />
@@ -109,10 +109,10 @@ export default function Page() {
     <div className="mx-auto max-w-6xl space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{t("zones_title")}</h1>
-        {writable && <Button onClick={() => setEditor({})}>+ {t("create_zone")}</Button>}
+        {writable && <Button variant="dark" onClick={() => setEditor({})}>+ {t("create_zone")}</Button>}
       </div>
       <input className={`${inputCls} max-w-xs`} placeholder={t("search")} aria-label={t("search")} value={q} onChange={(e) => setQ(e.target.value)} />
-      {isLoading && <p className="text-sm text-neutral-500">{t("loading")}</p>}
+      {isLoading && <p className="text-sm text-muted">{t("loading")}</p>}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {shown.map((z) => (
           <Card key={z.id} className="overflow-hidden">
@@ -120,7 +120,7 @@ export default function Page() {
             <div className="flex items-center justify-between px-4 py-3">
               <div className="min-w-0">
                 <h3 className="truncate font-medium"><i className="mr-2 inline-block h-2.5 w-2.5 rounded-sm" style={{ background: z.color }} />{z.name}</h3>
-                <button disabled={!writable} onClick={() => setAssign(z)} className="mt-1 text-sm text-neutral-600 underline decoration-dotted disabled:no-underline">{t("n_couriers", { n: z.courier_ids.length })}</button>
+                <button disabled={!writable} onClick={() => setAssign(z)} className="mt-1 text-sm text-muted underline decoration-dotted disabled:no-underline">{t("n_couriers", { n: z.courier_ids.length })}</button>
               </div>
               {writable && <Menu items={[
                 { label: t("edit"), onClick: () => setEditor({ zone: z }) },
@@ -131,7 +131,7 @@ export default function Page() {
           </Card>
         ))}
       </div>
-      {!isLoading && zones.length === 0 && <p className="text-sm text-neutral-500">{t("no_zones")}</p>}
+      {!isLoading && zones.length === 0 && <p className="text-sm text-muted">{t("no_zones")}</p>}
       {editor && <EditorModal key={editor.zone?.id ?? "new"} zone={editor.zone} zones={zones} onClose={() => setEditor(null)} />}
       {assign && <CouriersModal key={assign.id} zone={assign} onClose={() => setAssign(null)} />}
     </div>

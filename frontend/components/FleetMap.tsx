@@ -29,14 +29,14 @@ function FlyTo({ target }: { target: [number, number] | null }) {
   return null;
 }
 
-export default function FleetMap({ couriers, orders, zones, selectedId, onSelect }: {
-  couriers: Courier[]; orders: Order[]; zones: Zone[]; selectedId: number | null; onSelect: (id: number) => void;
+export default function FleetMap({ couriers, orders, zones, selectedId, onSelect, focus }: {
+  couriers: Courier[]; orders: Order[]; zones: Zone[]; selectedId: number | null; onSelect: (id: number) => void; focus?: [number, number] | null;
 }) {
   const sel = couriers.find((c) => c.id === selectedId)?.last_location;
   return (
     <MapContainer center={TBILISI} zoom={12} className="h-full w-full rounded-xl" scrollWheelZoom>
       <TileLayer attribution={TILE_ATTRIBUTION} url={TILE_URL} maxZoom={19} />
-      <FlyTo target={sel ? [sel.lat, sel.lon] : null} />
+      <FlyTo target={focus ?? (sel ? [sel.lat, sel.lon] : null)} />
       {zones.map((z) => (
         <Polygon key={`z${z.id}`} positions={z.polygon.map(([lon, lat]) => [lat, lon] as [number, number])}
           pathOptions={{ color: z.color, weight: 2, fillOpacity: 0.12 }}><Tooltip sticky>{z.name}</Tooltip></Polygon>

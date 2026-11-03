@@ -49,24 +49,24 @@ export default function Page() {
     mutationFn: (u: UserRow) => call(`/users/${u.id}`, { method: "PATCH", body: JSON.stringify({ is_active: !u.is_active }) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
   });
-  if (!allowed) return <p className="text-sm text-neutral-500">{t("only_admin")}</p>;
+  if (!allowed) return <p className="text-sm text-muted">{t("only_admin")}</p>;
   return (
     <div className="mx-auto max-w-5xl space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{t("team_title")}</h1>
-        <Button onClick={() => setModal({})}>+ {t("add_user")}</Button>
+        <Button variant="dark" onClick={() => setModal({})}>+ {t("add_user")}</Button>
       </div>
       <ErrorText error={toggle.error} />
       <Card className="overflow-x-auto">
         <table className="w-full text-left text-sm">
-          <thead className="border-b text-xs text-neutral-500"><tr><th className="p-3">{t("full_name")}</th><th>{t("email")}</th><th>{t("role")}</th><th>{t("status")}</th><th /></tr></thead>
+          <thead className="border-b text-xs text-muted"><tr><th className="p-3">{t("full_name")}</th><th>{t("email")}</th><th>{t("role")}</th><th>{t("status")}</th><th /></tr></thead>
           <tbody>
-            {users.isLoading && <tr><td className="p-3 text-neutral-500" colSpan={5}>{t("loading")}</td></tr>}
+            {users.isLoading && <tr><td className="p-3 text-muted" colSpan={5}>{t("loading")}</td></tr>}
             {(users.data ?? []).map((u) => (
               <tr key={u.id} className="border-b last:border-0">
                 <td className="p-3">{u.full_name || "—"}</td><td>{u.email}</td>
-                <td><span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs">{u.role}</span></td>
-                <td><span className={u.is_active ? "text-green-700" : "text-neutral-400"}>{u.is_active ? t("active") : t("inactive")}</span></td>
+                <td><span className="rounded-full bg-surface2 px-2 py-0.5 text-xs">{u.role}</span></td>
+                <td><span className={u.is_active ? "text-green-700" : "text-muted"}>{u.is_active ? t("active") : t("inactive")}</span></td>
                 <td className="space-x-2 pr-3 text-right">
                   <Button variant="ghost" onClick={() => setModal({ user: u })}>{t("edit")}</Button>
                   <Button variant="ghost" disabled={u.id === me?.id} onClick={() => toggle.mutate(u)}>{u.is_active ? t("inactive") : t("active")}</Button>
@@ -78,7 +78,7 @@ export default function Page() {
       <Card className="p-4">
         <h2 className="mb-2 text-sm font-semibold">{t("roles")}</h2>
         <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
-          {(roles.data ?? []).map((r) => <div key={r.name}><dt className="inline font-medium">{r.name}</dt><dd className="inline text-neutral-500"> — {r.description}</dd></div>)}
+          {(roles.data ?? []).map((r) => <div key={r.name}><dt className="inline font-medium">{r.name}</dt><dd className="inline text-muted"> — {r.description}</dd></div>)}
         </dl>
       </Card>
       {modal && roles.data && <UserModal key={modal.user?.id ?? "new"} user={modal.user} roles={roles.data} onClose={() => setModal(null)} />}

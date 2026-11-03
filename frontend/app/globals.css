@@ -1,2 +1,32 @@
 @tailwind base; @tailwind components; @tailwind utilities;
-body { @apply bg-neutral-50 text-neutral-900; }
+
+/* Colour tokens as space-separated RGB channels so Tailwind opacity modifiers work. */
+:root {
+  --app: 246 247 249; --surface: 255 255 255; --surface2: 243 244 246; --line: 229 231 235;
+  --ink: 23 26 33; --muted: 107 114 128;
+  --brand: 242 106 27; --brand-hover: 201 82 14; --brand-text: 176 68 8; --brand-light: 255 241 232;
+  --solo: 20 33 61; --solo-hover: 31 48 87;          /* PLACEHOLDER dark brand navy */
+  --chart: 232 93 4;                                  /* validated vs white surface (dataviz validator) */
+  color-scheme: light;
+}
+/* Dark theme: deep navy "financial report" palette — layered surfaces, hairline borders, muted secondary text. */
+.dark {
+  --app: 9 14 26; --surface: 15 23 41; --surface2: 22 33 56; --line: 36 49 77;
+  --ink: 230 234 242; --muted: 138 148 168;
+  --brand: 255 138 61; --brand-hover: 255 156 90; --brand-text: 255 170 110; --brand-light: 58 36 24;
+  --solo: 62 96 168; --solo-hover: 80 116 190;
+  --chart: 232 101 26;                                /* validated vs #0F1729 surface */
+  color-scheme: dark;
+}
+
+body { @apply bg-app text-ink antialiased; font-variant-numeric: tabular-nums; }
+::placeholder { color: rgb(var(--muted) / 0.8); }
+select, input, textarea { color: rgb(var(--ink)); }
+
+/* Leaflet: darken OSM tiles in dark mode (markers/popups live in other panes and stay crisp). */
+.dark .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.88) saturate(0.7); }
+.dark .leaflet-container { background: rgb(var(--app)); }
+.dark .leaflet-popup-content-wrapper, .dark .leaflet-popup-tip { background: rgb(var(--surface)); color: rgb(var(--ink)); }
+.dark .leaflet-bar a { background: rgb(var(--surface)); color: rgb(var(--ink)); border-color: rgb(var(--line)); }
+.dark .leaflet-control-attribution { background: rgb(var(--surface) / 0.8); color: rgb(var(--muted)); }
+.dark .leaflet-control-attribution a { color: rgb(var(--brand-text)); }

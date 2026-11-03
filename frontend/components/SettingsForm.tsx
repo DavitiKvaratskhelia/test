@@ -21,12 +21,12 @@ export default function SettingsForm({ group, title, fields, note }: { group: ke
     mutationFn: () => call(`/settings/${group}`, { method: "PUT", body: JSON.stringify(form) }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["settings"] }); setSaved(true); setTimeout(() => setSaved(false), 2000); },
   });
-  if (!data) return <p className="text-sm text-neutral-500">{t("loading")}</p>;
+  if (!data) return <p className="text-sm text-muted">{t("loading")}</p>;
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <h1 className="text-xl font-semibold">{title}</h1>
-      {note && <p className="rounded-lg bg-neutral-100 p-3 text-xs text-neutral-600">{note}</p>}
-      {!editable && <p className="text-xs text-neutral-500">{t("read_only")}</p>}
+      {note && <p className="rounded-lg bg-surface2 p-3 text-xs text-muted">{note}</p>}
+      {!editable && <p className="text-xs text-muted">{t("read_only")}</p>}
       <Card className="space-y-4 p-5">
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); save.mutate(); }}>
           {fields.map((f) => (

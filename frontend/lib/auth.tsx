@@ -51,5 +51,6 @@ export const can = {
   manageSettings: (r?: string) => r === "admin" || r === "operations_manager",
   manageUsers: (r?: string) => r === "admin",
   addresses: (r?: string) => r === "admin" || r === "dispatcher" || r === "operations_manager",
+  createOrder: (r?: string) => r === "admin" || r === "dispatcher" || r === "operations_manager",
   fleet: (r?: string) => r === "admin" || r === "dispatcher" || r === "operations_manager",
 };

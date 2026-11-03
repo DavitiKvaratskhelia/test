@@ -77,6 +77,7 @@ def _courier_view(c: Courier, v: Vehicle | None = None) -> dict:
         "id": c.id, "full_name": c.full_name, "status": c.status, "zone": c.zone, "branch": c.branch,
         "vehicle_type": v.type if v else None, "vehicle_model": v.model if v else None,
         "plate": v.plate if v else None, "is_simulated": c.is_simulated,
+        "capacity_kg": v.capacity_kg if v else None, "capacity_volume_l": v.capacity_volume_l if v else None,
         # position is only reported with its age; offline/unknown positions are flagged, not hidden
         "last_location": None if c.last_lat is None else {"lat": c.last_lat, "lon": c.last_lon},
         "last_seen": c.last_seen, "age_seconds": age, "freshness": fresh.value,
