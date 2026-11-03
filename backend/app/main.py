@@ -24,28 +24,19 @@ app.include_router(orders_router)
 
 @app.get("/health", tags=["ops"])
 def health():
+    from .demo import ensure_bootstrap, status as demo_status
+    extra = {}
+    if settings.demo_mode:
+        try:
+            ensure_bootstrap()
+        except Exception as e:  # surface bootstrap failures instead of hiding them
+            return {"status": "degraded", "demo": True, "bootstrap_error": f"{type(e).__name__}: {e}"}
+        extra = {"demo": True, "simulated_data": True, **demo_status}
     try:
         with engine.connect() as c:
             c.execute(text("select 1"))
         db_ok = True
     except Exception:
         db_ok = False
-    return {"status": "ok" if db_ok else "degraded", "db": db_ok, "env": settings.environment}
+    return {"status": "ok" if db_ok else "degraded", "db": db_ok, "env": settings.environment, **extra}
 
-
-@app.on_event("startup")
-def demo_bootstrap():
-    """Only in DEMO_MODE: create schema, roles, optional demo login and SIMULATED fleet data."""
-    if not settings.demo_mode:
-        return
-    from .db import Base, SessionLocal
-    from .seed import seed
-    from .seed_demo import seed_demo
-    from .create_user import create_user
-
-    Base.metadata.create_all(engine)
-    with SessionLocal() as db:
-        seed(db)
-        if settings.demo_user_email and settings.demo_user_password:
-            create_user(db, settings.demo_user_email, settings.demo_user_password, "admin", "Demo admin")
-        seed_demo(db)

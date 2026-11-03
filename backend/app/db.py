@@ -19,6 +19,8 @@ class Base(DeclarativeBase):
 
 
 def get_db():
+    from .demo import ensure_bootstrap  # no-op unless DEMO_MODE
+    ensure_bootstrap()
     db = SessionLocal()
     try:
         yield db
