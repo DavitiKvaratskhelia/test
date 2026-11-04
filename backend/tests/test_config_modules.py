@@ -28,7 +28,7 @@ def test_saved_addresses_crud_search_pagination(client):
     assert client.get("/addresses", headers=login(client, "courier@z.local")).status_code == 403
 
 
-def test_zones_create_assign_couriers_and_lookup(client, db):
+def test_zones_create_assign_couriers_and_lookup(client, db, tid):
     from app.models import Courier
     ops = login(client, "operations_manager@z.local")
     disp = login(client, "dispatcher@z.local")
@@ -36,7 +36,7 @@ def test_zones_create_assign_couriers_and_lookup(client, db):
     assert client.post("/zones", headers=ops, json={"name": "Z", "polygon": [[1, 2]]}).status_code == 422
     z = client.post("/zones", headers=ops, json={"name": "Z", "polygon": SQUARE}).json()
     assert client.post("/zones", headers=ops, json={"name": "Z", "polygon": SQUARE}).status_code == 409
-    c = Courier(full_name="C"); db.add(c); db.commit()
+    c = Courier(full_name="C", tenant_id=tid); db.add(c); db.commit()
     assert client.put(f"/zones/{z['id']}/couriers", headers=ops, json={"courier_ids": [c.id, 999]}).status_code == 422
     assert client.put(f"/zones/{z['id']}/couriers", headers=ops, json={"courier_ids": [c.id]}).json()["courier_ids"] == [c.id]
     assert [h["name"] for h in client.get("/zones/lookup?lat=41.5&lon=44.5", headers=disp).json()] == ["Z"]
@@ -56,7 +56,7 @@ def test_order_gets_zone_from_polygon(client):
 
 def test_user_management_and_guards(client, admin, db):
     r = client.post("/users", headers=admin, json={"email": "New@Z.com", "password": "longenough1", "role": "dispatcher", "full_name": "N"})
-    assert r.status_code == 201 and r.json()["email"] == "new@z.com" and "password" not in str(r.json())
+    assert r.status_code == 201 and r.json()["email"] == "new@z.com" and "password_hash" not in str(r.json()) and "longenough1" not in str(r.json())
     assert client.post("/users", headers=admin, json={"email": "new@z.com", "password": "longenough1", "role": "dispatcher"}).status_code == 409
     assert client.post("/users", headers=admin, json={"email": "a@z.com", "password": "short", "role": "dispatcher"}).status_code == 422
     assert client.post("/users", headers=admin, json={"email": "a@z.com", "password": "longenough1", "role": "root"}).status_code == 422

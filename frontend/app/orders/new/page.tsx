@@ -8,7 +8,7 @@ import AppShell from "@/components/AppShell";
 import { Button, ErrorText, Field, inputCls } from "@/components/ui";
 import { can, useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
-import { ageText, Courier, FRESH_COLOR, MODEL_LABEL } from "@/lib/types";
+import { ageText, Branch, Courier, FRESH_COLOR, MODEL_LABEL } from "@/lib/types";
 
 const OrderMap = dynamic(() => import("@/components/OrderMap"), { ssr: false, loading: () => <div className="h-full animate-pulse rounded-xl bg-line" /> });
 
@@ -39,6 +39,8 @@ function NewOrder() {
       if (p.lat != null && p.lon != null) { setTo((x) => ({ ...x, lat: p.lat, lon: p.lon, text: x.text || `${t("pin_dropped")} ${p.lat!.toFixed(5)}, ${p.lon!.toFixed(5)}` })); setActive("to"); }
     }).catch(() => {});
   }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+  const branches = useQuery({ queryKey: ["branches"], queryFn: () => call<Branch[]>("/branches") });
+  const [branchId, setBranchId] = useState<number | null>(null);
   const couriers = useQuery({ queryKey: ["couriers"], queryFn: () => call<Courier[]>("/fleet/couriers") });
   const kg = Number(weight) || 0;
   const list = useMemo(() => (couriers.data ?? []).filter((c) => !carsOnly || c.vehicle_type === "car"), [couriers.data, carsOnly]);
@@ -48,7 +50,7 @@ function NewOrder() {
     mutationFn: (cid: number | null) => call("/orders", {
       method: "POST",
       body: JSON.stringify({
-        client_key: clientKey, pickup_address: from.text, pickup_branch: from.name, pickup_lat: from.lat, pickup_lon: from.lon,
+        client_key: clientKey, branch_id: branchId, pickup_address: from.text, pickup_branch: from.name, pickup_lat: from.lat, pickup_lon: from.lon,
         delivery_address: to.text, delivery_lat: to.lat, delivery_lon: to.lon, delivery_details: details,
         customer_name: customer, customer_phone: phone.trim() === "+995" ? "" : phone, weight_kg: kg, priority, courier_id: cid,
       }),
@@ -73,6 +75,13 @@ function NewOrder() {
           </div>
         </div>
 
+        {(branches.data?.length ?? 0) > 0 && (
+          <Field label={t("branch")}>
+            <select className={inputCls} aria-label={t("branch")} value={branchId ?? ""} onChange={(e) => {
+              const b = branches.data!.find((x) => x.id === Number(e.target.value)); setBranchId(b?.id ?? null);
+              if (b) setFrom({ text: b.address || b.name, name: b.name, lat: b.lat, lon: b.lon });
+            }}><option value="">{t("pick_branch")}</option>{branches.data!.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
+          </Field>)}
         <div className="grid gap-2 rounded-2xl border bg-surface p-2 sm:grid-cols-2">
           <AddressField label={t("where_from")} icon="○" value={from.text} active={active === "from"} onFocus={() => setActive("from")}
             onText={(v) => setFrom({ ...from, text: v })} onSelect={(a) => setFrom({ text: a.address, name: a.name, lat: a.lat, lon: a.lon, phone: a.phone })} />

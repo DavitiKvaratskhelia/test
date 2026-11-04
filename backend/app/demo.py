@@ -25,9 +25,10 @@ def ensure_bootstrap() -> None:
         Base.metadata.create_all(engine)
         with SessionLocal() as db:
             seed(db)
+            seed_demo(db)   # both simulated companies first, so the demo login can be a member of both
             if settings.demo_user_email and settings.demo_user_password:
-                create_user(db, settings.demo_user_email, settings.demo_user_password, "admin", "Demo admin")
-            seed_demo(db)
+                create_user(db, settings.demo_user_email, settings.demo_user_password, "owner", "Demo admin", platform_admin=True)
+                create_user(db, settings.demo_user_email, settings.demo_user_password, "admin", "Demo admin", tenant_slug="tbilisi-express")
             status.update(bootstrapped=True, users=db.query(User).count(), couriers=db.query(Courier).count(),
                           orders=db.query(Order).count())
         _done = True

@@ -1,7 +1,7 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { useAuth } from "@/lib/auth";
+import { can, useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
 import { ageText, Courier, FRESH_COLOR, Order, OrderEvent } from "@/lib/types";
 import { IconCheck, IconCircle, IconCopy, IconExternal, IconMail, IconPin, IconPlus, IconUser, IconX } from "./icons";
@@ -42,7 +42,8 @@ export default function OrderModal({ orderId, onClose }: { orderId: number; onCl
   const [statusOpen, setStatusOpen] = useState(false);
   const [nextStatus, setNextStatus] = useState(""); const [reason, setReason] = useState("");
   const [comment, setComment] = useState(""); const [copied, setCopied] = useState(false);
-  const canWrite = me?.role === "admin" || me?.role === "dispatcher" || me?.role === "operations_manager";
+  const canWrite = can.createOrder(me?.role);   // status / comment (server: orders:write)
+  const canDispatch = can.dispatch(me?.role);   // courier assignment (server: dispatch)
 
   const { data: o, error, isLoading } = useQuery({ queryKey: ["order", orderId], queryFn: () => call<Order>(`/orders/${orderId}`) });
   useEffect(() => { if (o) setComment(o.comment ?? ""); }, [o?.id, o?.version]);  // eslint-disable-line react-hooks/exhaustive-deps
@@ -97,9 +98,9 @@ export default function OrderModal({ orderId, onClose }: { orderId: number; onCl
                       <div className="flex items-center gap-3 rounded-2xl border bg-surface p-3">
                         <Avatar name={o.courier_name} size={40} />
                         <div className="min-w-0 flex-1 text-sm"><div className="truncate font-medium">{o.courier_name}</div><div className="truncate text-xs text-muted">{o.courier_phone || "—"}{o.courier_transport ? ` · ${o.courier_transport}` : ""}</div></div>
-                        {canWrite && ["new", "ready", "assigned"].includes(o.status) && <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setPicker(!picker)}>{t("change_courier")}</Button>}
+                        {canDispatch && ["new", "ready", "assigned"].includes(o.status) && <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setPicker(!picker)}>{t("change_courier")}</Button>}
                       </div>
-                    ) : canWrite && ["new", "ready"].includes(o.status) ? (
+                    ) : canDispatch && ["new", "ready"].includes(o.status) ? (
                       <button onClick={() => setPicker(!picker)} className="flex h-24 w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-brand/60 bg-brand-light text-sm font-medium text-brand-text"><IconPlus className="!h-4 !w-4" />{t("assign")}</button>
                     ) : <p className="text-sm text-muted">{t("unassigned_courier")}</p>}
                     {picker && <div className="mt-2"><CourierPicker order={o} onDone={(id) => assign.mutate(id)} />{o.courier_name && <button className="mt-1 text-xs text-red-600 underline" onClick={() => assign.mutate(null)}>{t("unassigned_courier")}</button>}</div>}

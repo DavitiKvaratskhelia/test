@@ -8,9 +8,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ...db import get_db
-from ...models import Courier, DeliveryAssignment, Order, OrderStatusEvent, PublicLink
+from ...models import Courier, DeliveryAssignment, Order, OrderStatusEvent, PublicLink, Tenant
 from ...services.freshness import classify
-from ..settings.router import load as load_setting
 
 router = APIRouter(prefix="/public", tags=["public"])
 NOT_FOUND = HTTPException(404, "This link is not valid any more")  # same answer for unknown / expired / revoked
@@ -27,6 +26,15 @@ def _valid_link(db: Session, token: str, kind: str) -> PublicLink:
     return link
 
 
+def _company_name(db: Session, tenant_id: int) -> str:
+    return db.get(Tenant, tenant_id).name
+
+
+def _brand(db: Session, tenant_id: int) -> dict:
+    t = db.get(Tenant, tenant_id)
+    return {"company": t.name, "brand_color": t.brand_color, "logo_text": t.logo_text or t.name[:1].upper()}
+
+
 STEPS = ["ready", "assigned", "picked_up", "on_the_way", "delivered"]
 
 
@@ -34,21 +42,21 @@ STEPS = ["ready", "assigned", "picked_up", "on_the_way", "delivered"]
 def track(token: str, db: Session = Depends(get_db)):
     link = _valid_link(db, token, "track")
     o = db.get(Order, link.order_id)
-    if not o:
+    if not o or o.tenant_id != link.tenant_id:
         raise NOT_FOUND
     first: dict[str, datetime] = {}
     for e in db.scalars(select(OrderStatusEvent).where(OrderStatusEvent.order_id == o.id).order_by(OrderStatusEvent.id)):
         first.setdefault(e.to_status, e.created_at)
     first.setdefault("ready", first.get("new") or o.created_at)
     courier = db.scalar(select(Courier).join(DeliveryAssignment, DeliveryAssignment.courier_id == Courier.id)
-                        .where(DeliveryAssignment.order_id == o.id, DeliveryAssignment.active))
+                        .where(DeliveryAssignment.order_id == o.id, DeliveryAssignment.active, Courier.tenant_id == link.tenant_id))
     location = None
     if courier and o.status in ("picked_up", "on_the_way") and courier.last_lat is not None:
         fresh, age = classify(courier.last_seen)
         if fresh.value in ("realtime", "delayed"):   # a stale position is never shown as current
             location = {"lat": courier.last_lat, "lon": courier.last_lon, "age_seconds": round(age or 0)}
     return {
-        "company": load_setting(db, "account")["company_name"], "reference": f"#{o.external_id}", "status": o.status,
+        **_brand(db, link.tenant_id), "reference": f"#{o.external_id}", "status": o.status,
         "terminal": o.status in ("delivered", "failed", "cancelled", "returned"),
         "steps": [{"key": k, "at": first.get(k)} for k in STEPS],
         "delivery_address": o.delivery_address,
@@ -65,7 +73,7 @@ class PinIn(BaseModel):
 @router.get("/pin/{token}")
 def pin_info(token: str, db: Session = Depends(get_db)):
     link = _valid_link(db, token, "pin")
-    return {"company": load_setting(db, "account")["company_name"], "expires_at": link.expires_at,
+    return {**_brand(db, link.tenant_id), "expires_at": link.expires_at,
             "submitted": bool(link.payload.get("lat") is not None), "lat": link.payload.get("lat"), "lon": link.payload.get("lon")}
 
 

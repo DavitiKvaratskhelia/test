@@ -70,15 +70,15 @@ def test_validation_rejections(client, courier_ctx):
                                           "implausible_speed", "unknown_courier"]
 
 
-def test_no_consent_no_tracking(client, db):
-    c = Courier(full_name="NoConsent"); db.add(c); db.commit()
+def test_no_consent_no_tracking(client, db, tid):
+    c = Courier(full_name="NoConsent", tenant_id=tid); db.add(c); db.commit()
     admin = login(client, "admin@zoommer.local", "adminpass")
     r = client.post("/fleet/locations", json={"events": [ev(c.id)]}, headers=admin).json()["results"][0]
     assert r["reason"] == "no_tracking_consent"
 
 
-def test_courier_cannot_post_for_another(client, db, courier_ctx):
-    other = Courier(full_name="Other", tracking_consent_at=NOW); db.add(other); db.commit()
+def test_courier_cannot_post_for_another(client, db, courier_ctx, tid):
+    other = Courier(full_name="Other", tracking_consent_at=NOW, tenant_id=tid); db.add(other); db.commit()
     _, h = courier_ctx
     r = client.post("/fleet/locations", json={"events": [ev(other.id)]}, headers=h).json()["results"][0]
     assert r["reason"] == "not_your_courier_id"

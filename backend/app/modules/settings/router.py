@@ -3,8 +3,8 @@ from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.orm import Session
 
 from ...db import get_db
-from ...deps import require
-from ...models import AppSetting, User
+from ...deps import Principal, require
+from ...models import AppSetting
 from ...services import audit
 
 router = APIRouter(prefix="/settings", tags=["settings"])
@@ -50,29 +50,29 @@ SCHEMAS: dict[str, type[BaseModel]] = {
 }
 
 
-def load(db: Session, key: str) -> dict:
-    row = db.get(AppSetting, key)
+def load(db: Session, tenant_id: int, key: str) -> dict:
+    row = db.get(AppSetting, (tenant_id, key))
     return SCHEMAS[key](**(row.value if row else {})).model_dump()
 
 
 @router.get("")
-def all_settings(db: Session = Depends(get_db), _: User = Depends(require("settings:read"))):
-    return {k: load(db, k) for k in SCHEMAS}
+def all_settings(db: Session = Depends(get_db), user: Principal = Depends(require("settings:read"))):
+    return {k: load(db, user.tenant_id, k) for k in SCHEMAS}
 
 
 @router.put("/{key}")
-def put_setting(key: str, body: dict, db: Session = Depends(get_db), user: User = Depends(require("settings:write"))):
+def put_setting(key: str, body: dict, db: Session = Depends(get_db), user: Principal = Depends(require("settings:write"))):
     if key not in SCHEMAS:
         raise HTTPException(404, "Unknown settings group")
     try:
         value = SCHEMAS[key](**body).model_dump()
     except Exception as e:  # pydantic ValidationError -> 422 with readable message
         raise HTTPException(422, str(e))
-    row = db.get(AppSetting, key)
+    row = db.get(AppSetting, (user.tenant_id, key))
     if row:
         row.value, row.updated_by = value, user.id
     else:
-        db.add(AppSetting(key=key, value=value, updated_by=user.id))
-    audit.record(db, actor_id=user.id, action="update", entity="settings", entity_id=key, detail=value)
+        db.add(AppSetting(tenant_id=user.tenant_id, key=key, value=value, updated_by=user.id))
+    audit.record(db, actor_id=user.id, tenant_id=user.tenant_id, action="update", entity="settings", entity_id=key, detail=value)
     db.commit()
     return value

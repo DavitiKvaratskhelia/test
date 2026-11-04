@@ -5,9 +5,10 @@ import AppShell from "@/components/AppShell";
 import { can, useAuth } from "@/lib/auth";
 import { Key, useT } from "@/lib/i18n";
 
-const ITEMS: { href: string; key: Key; icon: string; visible?: (r?: string) => boolean }[] = [
+const ITEMS: { href: string; key: Key; icon: string; visible?: (r?: string | null) => boolean }[] = [
   { href: "/settings/account", key: "set_account", icon: "👤" },
   { href: "/settings/addresses", key: "set_addresses", icon: "📍", visible: can.addresses },
+  { href: "/settings/branches", key: "set_branches", icon: "🏬", visible: can.fleet },
   { href: "/settings/payment", key: "set_payment", icon: "💳" },
   { href: "/settings/delivery", key: "set_delivery", icon: "📦" },
   { href: "/settings/geofencing", key: "set_geofencing", icon: "🗺️", visible: can.fleet },

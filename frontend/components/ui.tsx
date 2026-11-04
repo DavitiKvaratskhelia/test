@@ -14,31 +14,31 @@ export function Button({ variant = "primary", className = "", ...p }: React.Butt
   return <button {...p} className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${v} ${className}`} />;
 }
 
-export function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
-  return (
-    <label className="block text-sm">
-      <span className="mb-1 block text-xs font-medium text-muted">{label}</span>
-      {children}
-      {hint && <span className="mt-1 block text-xs text-muted">{hint}</span>}
-    </label>
-  );
+/** Labelled form field. For a group of checkboxes/radios use `group`: a <label> must not wrap other labels, because the browser
+ *  then forwards clicks on the inner text to the FIRST control of the outer label (wrong option gets toggled). */
+export function Field({ label, children, hint, group = false }: { label: string; children: React.ReactNode; hint?: string; group?: boolean }) {
+  const caption = <span className="mb-1 block text-xs font-medium text-muted">{label}</span>;
+  const foot = hint && <span className="mt-1 block text-xs text-muted/80">{hint}</span>;
+  return group
+    ? <div role="group" aria-label={label} className="block text-sm">{caption}{children}{foot}</div>
+    : <label className="block text-sm">{caption}{children}{foot}</label>;
 }
 
 export const inputCls = "w-full rounded-xl border bg-app px-3 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:bg-surface2";
 
-export function Modal({ title, onClose, children, wide = false }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
+export function Modal({ title, onClose, children, wide = false, locked = false }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean; locked?: boolean }) {
   const { t } = useT();
   useEffect(() => {
-    const h = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const h = (e: KeyboardEvent) => e.key === "Escape" && !locked && onClose();
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/40 p-3" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/40 p-3" onMouseDown={(e) => e.target === e.currentTarget && !locked && onClose()}>
       <div role="dialog" aria-label={title} className={`flex max-h-[95vh] w-full flex-col overflow-hidden rounded-2xl bg-pop shadow-xl ${wide ? "max-w-5xl" : "max-w-lg"}`}>
         <div className="flex items-center justify-between border-b px-5 py-3">
           <h2 className="font-semibold">{title}</h2>
-          <button aria-label={t("close")} onClick={onClose} className="rounded-full p-1.5 text-muted hover:bg-surface2">✕</button>
+          {!locked && <button aria-label={t("close")} onClick={onClose} className="rounded-full p-1.5 text-muted hover:bg-surface2">✕</button>}
         </div>
         <div className="overflow-y-auto p-5">{children}</div>
       </div>

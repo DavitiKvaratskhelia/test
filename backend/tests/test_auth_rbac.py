@@ -2,7 +2,7 @@ from .conftest import login
 
 
 def test_login_and_me(client, admin):
-    assert client.get("/auth/me", headers=admin).json()["role"] == "admin"
+    assert client.get("/auth/me", headers=admin).json()["role"] == "owner"
 
 
 def test_bad_password(client):

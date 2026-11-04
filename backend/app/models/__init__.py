@@ -24,6 +24,49 @@ class TimestampMixin:
     updated_at: Mapped[datetime] = mapped_column(TS, default=utcnow, onupdate=utcnow)
 
 
+# ---------- tenancy ----------
+class Tenant(Base, TimestampMixin):
+    """A company using the platform. Every business record below carries tenant_id; nothing is shared between tenants."""
+    __tablename__ = "tenants"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    slug: Mapped[str] = mapped_column(String(40), unique=True)
+    name: Mapped[str] = mapped_column(String(120))
+    plan: Mapped[str] = mapped_column(String(20), default="pilot")  # assigned by hand for the pilot
+    default_locale: Mapped[str] = mapped_column(String(5), default="ka")
+    timezone: Mapped[str] = mapped_column(String(60), default="Asia/Tbilisi")
+    brand_color: Mapped[str] = mapped_column(String(9), default="#F26A1B")
+    logo_text: Mapped[str] = mapped_column(String(3), default="")  # 1-3 letters shown in the logo tile
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_simulated: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class Membership(Base, TimestampMixin):
+    """A user's role inside one company. Roles are per company; one login can belong to several companies."""
+    __tablename__ = "memberships"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), index=True)
+    role: Mapped[str] = mapped_column(String(30))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    branch_ids: Mapped[list] = mapped_column(JSONType, default=list)  # empty = all branches (branch operators are limited to these)
+    expires_at: Mapped[datetime | None] = mapped_column(TS)           # set only for temporary platform-support access
+    granted_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    __table_args__ = (UniqueConstraint("user_id", "tenant_id", name="uq_membership"),)
+
+
+class Branch(Base, TimestampMixin):
+    __tablename__ = "branches"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    city: Mapped[str] = mapped_column(String(80), default="Tbilisi")
+    address: Mapped[str] = mapped_column(String(300), default="")
+    lat: Mapped[float | None] = mapped_column(Float)
+    lon: Mapped[float | None] = mapped_column(Float)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    __table_args__ = (UniqueConstraint("tenant_id", "name", name="uq_branch_name"),)
+
+
 # ---------- identity ----------
 class Role(Base):
     __tablename__ = "roles"
@@ -37,8 +80,10 @@ class User(Base, TimestampMixin):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     full_name: Mapped[str] = mapped_column(String(200), default="")
-    role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"))
-    role: Mapped[Role] = relationship(lazy="joined")
+    role_id: Mapped[int | None] = mapped_column(ForeignKey("roles.id"))  # legacy; authorisation uses Membership.role
+    role: Mapped[Role | None] = relationship(lazy="joined")
+    is_platform_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False)  # set when an admin created the account / reset the password
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     locale: Mapped[str] = mapped_column(String(5), default="en")  # en | ka
 
@@ -58,6 +103,7 @@ class GpsProvider(Base, TimestampMixin):
 class Courier(Base, TimestampMixin):
     __tablename__ = "couriers"
     id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), index=True)
     user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), unique=True)
     full_name: Mapped[str] = mapped_column(String(200))
     first_name: Mapped[str] = mapped_column(String(100), default="")
@@ -82,7 +128,8 @@ class Courier(Base, TimestampMixin):
 class Vehicle(Base, TimestampMixin):
     __tablename__ = "vehicles"
     id: Mapped[int] = mapped_column(primary_key=True)
-    plate: Mapped[str | None] = mapped_column(String(20), unique=True)  # pedestrians/bicycles have none
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), index=True)
+    plate: Mapped[str | None] = mapped_column(String(20))  # pedestrians/bicycles have none; unique per company
     type: Mapped[str] = mapped_column(String(20))  # car | scooter
     model: Mapped[str] = mapped_column(String(60), default="")  # e.g. marshrutka | combo | prius_v | scooter
     is_simulated: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -90,7 +137,8 @@ class Vehicle(Base, TimestampMixin):
     capacity_volume_l: Mapped[float] = mapped_column(Float, default=0)
     cost_per_km: Mapped[float] = mapped_column(Numeric(10, 4), default=0)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
-    __table_args__ = (CheckConstraint("type in ('car','scooter','bicycle','foot')", name="ck_vehicle_type"),)
+    __table_args__ = (CheckConstraint("type in ('car','scooter','bicycle','foot')", name="ck_vehicle_type"),
+                      UniqueConstraint("tenant_id", "plate", name="uq_vehicle_plate"))
 
 
 class GpsDevice(Base, TimestampMixin):
@@ -138,6 +186,8 @@ class Shift(Base):
 class Order(Base, TimestampMixin):
     __tablename__ = "orders"
     id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), index=True)
+    branch_id: Mapped[int | None] = mapped_column(ForeignKey("branches.id"), index=True)  # pickup branch
     source_system: Mapped[str] = mapped_column(String(40))
     external_id: Mapped[str] = mapped_column(String(100))
     status: Mapped[str] = mapped_column(String(20), default="new", index=True)
@@ -165,7 +215,7 @@ class Order(Base, TimestampMixin):
     distance_m: Mapped[float | None] = mapped_column(Float)       # straight-line pickup→delivery (NOT a road distance)
     stops: Mapped[list["OrderStop"]] = relationship(cascade="all, delete-orphan")
     __table_args__ = (
-        UniqueConstraint("source_system", "external_id", name="uq_order_external"),
+        UniqueConstraint("tenant_id", "source_system", "external_id", name="uq_order_external"),
         CheckConstraint("status in ('new','ready','assigned','picked_up','on_the_way','delivered','failed','returned','cancelled')",
                         name="ck_order_status"),
     )
@@ -381,6 +431,7 @@ class IntegrationEvent(Base):
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_id: Mapped[int | None] = mapped_column(ForeignKey("tenants.id"), index=True)
     actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     action: Mapped[str] = mapped_column(String(60))
     entity: Mapped[str] = mapped_column(String(60))
@@ -394,6 +445,7 @@ class SavedAddress(Base, TimestampMixin):
     """Frequently used pickup/delivery points (branches, warehouses, regular customers)."""
     __tablename__ = "saved_addresses"
     id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), index=True)
     name: Mapped[str] = mapped_column(String(200))
     address: Mapped[str] = mapped_column(String(300))
     lat: Mapped[float | None] = mapped_column(Float)
@@ -408,10 +460,13 @@ class Zone(Base, TimestampMixin):
     """Operational area drawn by a dispatcher. polygon = GeoJSON-style ring [[lon, lat], ...], not closed."""
     __tablename__ = "zones"
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(100), unique=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    priority: Mapped[int] = mapped_column(Integer, default=0)  # higher wins where zones overlap
     polygon: Mapped[list] = mapped_column(JSONType)
     color: Mapped[str] = mapped_column(String(9), default="#F26A1B")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    __table_args__ = (UniqueConstraint("tenant_id", "name", name="uq_zone_name"),)
 
 
 class ZoneCourier(Base):
@@ -422,6 +477,7 @@ class ZoneCourier(Base):
 
 class AppSetting(Base):
     __tablename__ = "app_settings"
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), primary_key=True)
     key: Mapped[str] = mapped_column(String(40), primary_key=True)
     value: Mapped[dict] = mapped_column(JSONType, default=dict)
     updated_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
@@ -444,6 +500,7 @@ class PublicLink(Base):
     """Unguessable, expiring, revocable link for people without an account (customer tracking / "Get the Pin")."""
     __tablename__ = "public_links"
     id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), index=True)
     token: Mapped[str] = mapped_column(String(64), unique=True)
     kind: Mapped[str] = mapped_column(String(10))  # track | pin
     order_id: Mapped[int | None] = mapped_column(ForeignKey("orders.id"), index=True)

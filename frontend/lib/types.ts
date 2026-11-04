@@ -11,18 +11,22 @@ export type Courier = {
 export type OrderEvent = { from: string | null; to: string; at: string; reason: string };
 export type Order = {
   version: number; comment: string; distance_m: number | null; price: number | null; currency: string | null;
-  courier_id: number | null; courier_phone: string | null; courier_transport: string | null; pickup_branch: string; updated_at: string | null; volume_l: number;
+  courier_id: number | null; courier_phone: string | null; courier_transport: string | null; branch_id: number | null; pickup_branch: string; updated_at: string | null; volume_l: number;
   events?: OrderEvent[]; allowed_next?: string[]; tracking_token?: string | null;
   id: number; external_id: string; status: string; delivery_address: string; pickup_address: string;
   customer_name: string; customer_phone: string; zone: string; pickup_lat: number | null; pickup_lon: number | null; delivery_lat: number | null; delivery_lon: number | null;
   weight_kg: number; is_simulated: boolean; priority: number; window_end: string | null; courier_name: string | null; created_at: string | null;
 };
 
-export type Zone = { id: number; name: string; polygon: number[][]; color: string; active: boolean; courier_ids: number[] };
+export type Zone = { id: number; name: string; polygon: number[][]; color: string; active: boolean; priority?: number; courier_ids: number[] };
 export type SavedAddress = { id: number; name: string; address: string; lat: number | null; lon: number | null; details: string; phone: string };
-export type UserRow = { id: number; email: string; full_name: string; role: string; is_active: boolean; locale: string };
+export type UserRow = { id: number; email: string; full_name: string; role: string; is_active: boolean; locale: string; branch_ids: number[]; must_change_password: boolean; support_access: boolean };
 export type RoleInfo = { name: string; description: string };
-export type Me = { id: number; email: string; role: string; locale: string; full_name?: string };
+export type Company = { tenant_id: number; slug: string; name: string; role: string; brand_color: string; logo_text: string; is_simulated: boolean };
+export type Me = { id: number; email: string; role: string | null; locale: string; full_name?: string; is_platform_admin: boolean; must_change_password: boolean;
+  tenant: Company | null; companies: Company[]; branch_ids: number[] };
+export type Branch = { id: number; name: string; city: string; address: string; lat: number | null; lon: number | null; active: boolean };
+export type PlatformTenant = { id: number; slug: string; name: string; plan: string; is_active: boolean; brand_color: string; logo_text: string; members: number; orders: number; is_simulated: boolean };
 
 export type AppSettings = {
   account: { company_name: string; default_locale: string; timezone: string; company_email: string; company_phone: string };

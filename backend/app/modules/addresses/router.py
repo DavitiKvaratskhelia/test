@@ -4,8 +4,9 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from ...db import get_db
-from ...deps import require
-from ...models import SavedAddress, User
+from ...deps import Principal, require
+from ...services.tenancy import get_owned
+from ...models import SavedAddress
 from ...services import audit
 
 router = APIRouter(prefix="/addresses", tags=["addresses"])
@@ -27,8 +28,8 @@ def _view(a: SavedAddress) -> dict:
 
 @router.get("")
 def list_addresses(q: str | None = None, limit: int = Query(12, ge=1, le=100), offset: int = Query(0, ge=0),
-                   db: Session = Depends(get_db), _: User = Depends(require("addresses:read"))):
-    stmt = select(SavedAddress)
+                   db: Session = Depends(get_db), user: Principal = Depends(require("addresses:read"))):
+    stmt = select(SavedAddress).where(SavedAddress.tenant_id == user.tenant_id)
     if q:
         like = f"%{q}%"
         stmt = stmt.where(or_(SavedAddress.name.ilike(like), SavedAddress.address.ilike(like),
@@ -39,33 +40,29 @@ def list_addresses(q: str | None = None, limit: int = Query(12, ge=1, le=100), o
 
 
 @router.post("", status_code=201)
-def create_address(body: AddressIn, db: Session = Depends(get_db), user: User = Depends(require("addresses:write"))):
-    a = SavedAddress(**body.model_dump(), created_by=user.id)
+def create_address(body: AddressIn, db: Session = Depends(get_db), user: Principal = Depends(require("addresses:write"))):
+    a = SavedAddress(**body.model_dump(), tenant_id=user.tenant_id, created_by=user.id)
     db.add(a)
     db.flush()
-    audit.record(db, actor_id=user.id, action="create", entity="saved_address", entity_id=a.id)
+    audit.record(db, actor_id=user.id, tenant_id=user.tenant_id, action="create", entity="saved_address", entity_id=a.id)
     db.commit()
     return _view(a)
 
 
 @router.put("/{address_id}")
 def update_address(address_id: int, body: AddressIn, db: Session = Depends(get_db),
-                   user: User = Depends(require("addresses:write"))):
-    a = db.get(SavedAddress, address_id)
-    if not a:
-        raise HTTPException(404, "Address not found")
+                   user: Principal = Depends(require("addresses:write"))):
+    a = get_owned(db, SavedAddress, address_id, user, "Address")
     for k, v in body.model_dump().items():
         setattr(a, k, v)
-    audit.record(db, actor_id=user.id, action="update", entity="saved_address", entity_id=a.id)
+    audit.record(db, actor_id=user.id, tenant_id=user.tenant_id, action="update", entity="saved_address", entity_id=a.id)
     db.commit()
     return _view(a)
 
 
 @router.delete("/{address_id}", status_code=204)
-def delete_address(address_id: int, db: Session = Depends(get_db), user: User = Depends(require("addresses:write"))):
-    a = db.get(SavedAddress, address_id)
-    if not a:
-        raise HTTPException(404, "Address not found")
+def delete_address(address_id: int, db: Session = Depends(get_db), user: Principal = Depends(require("addresses:write"))):
+    a = get_owned(db, SavedAddress, address_id, user, "Address")
     db.delete(a)
-    audit.record(db, actor_id=user.id, action="delete", entity="saved_address", entity_id=address_id)
+    audit.record(db, actor_id=user.id, tenant_id=user.tenant_id, action="delete", entity="saved_address", entity_id=address_id)
     db.commit()

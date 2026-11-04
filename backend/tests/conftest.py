@@ -8,9 +8,28 @@ from fastapi.testclient import TestClient
 
 from app.db import Base, SessionLocal, engine
 from app.main import app
-from app.models import Courier, User, Role
+from app.models import Courier, Membership, Tenant, User
 from app.seed import seed
 from app.core_security import hash_password
+
+
+def make_user(db, email, role, tenant_id, pw="pw", branch_ids=None, platform_admin=False):
+    """A login with a role in one company (roles live on the membership, not on the user)."""
+    u = db.query(User).filter_by(email=email).first()
+    if not u:
+        u = User(email=email, password_hash=hash_password(pw), is_platform_admin=platform_admin)
+        db.add(u)
+        db.flush()
+    db.add(Membership(user_id=u.id, tenant_id=tenant_id, role=role, branch_ids=branch_ids or []))
+    db.commit()
+    return u
+
+
+def make_tenant(db, slug, name=None, **kw):
+    t = Tenant(slug=slug, name=name or slug.title(), **kw)
+    db.add(t)
+    db.commit()
+    return t
 
 
 @pytest.fixture()
@@ -18,12 +37,16 @@ def db():
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     with SessionLocal() as s:
-        seed(s, admin_password="adminpass")
+        tenant = seed(s, admin_password="adminpass")
         for name in ("dispatcher", "courier", "finance_manager", "api_service", "operations_manager"):
-            r = s.query(Role).filter_by(name=name).one()
-            s.add(User(email=f"{name}@z.local", password_hash=hash_password("pw"), role_id=r.id))
-        s.commit()
+            make_user(s, f"{name}@z.local", name, tenant.id)
         yield s
+
+
+@pytest.fixture()
+def tid(db):
+    """Id of the default company (Zoommer)."""
+    return db.query(Tenant).filter_by(slug="zoommer").one().id
 
 
 @pytest.fixture()
@@ -43,10 +66,10 @@ def admin(client):
 
 
 @pytest.fixture()
-def courier_ctx(client, db, admin):
+def courier_ctx(client, db, admin, tid):
     """A consenting courier bound to the 'courier' user."""
     u = db.query(User).filter_by(email="courier@z.local").one()
-    c = Courier(full_name="Test Courier", user_id=u.id)
+    c = Courier(full_name="Test Courier", user_id=u.id, tenant_id=tid)
     db.add(c); db.commit()
     h = login(client, "courier@z.local")
     assert client.post(f"/fleet/couriers/{c.id}/consent", headers=h).status_code == 200

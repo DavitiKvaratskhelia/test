@@ -9,7 +9,8 @@ from sqlalchemy.orm import Session
 from ...config import settings
 from ...core_security import Role
 from ...db import get_db
-from ...deps import current_user, require
+from ...deps import Principal, current_user, require
+from ...services.tenancy import find_owned, get_owned
 from ...models import Courier, LocationEvent, User, Vehicle
 from ...services import audit
 from ...services.freshness import classify
@@ -56,15 +57,15 @@ class CourierIn(BaseModel):
 
 
 @router.post("/vehicles", status_code=201)
-def create_vehicle(body: VehicleIn, db: Session = Depends(get_db), user: User = Depends(require("fleet:manage"))):
-    v = Vehicle(**body.model_dump())
+def create_vehicle(body: VehicleIn, db: Session = Depends(get_db), user: Principal = Depends(require("fleet:manage"))):
+    v = Vehicle(**body.model_dump(), tenant_id=user.tenant_id)
     db.add(v)
     try:
         db.flush()
     except IntegrityError:
         db.rollback()
         raise HTTPException(409, "Plate already exists")
-    audit.record(db, actor_id=user.id, action="create", entity="vehicle", entity_id=v.id)
+    audit.record(db, actor_id=user.id, tenant_id=user.tenant_id, action="create", entity="vehicle", entity_id=v.id)
     db.commit()
     return {"id": v.id, "plate": v.plate, "type": v.type}
 
@@ -76,7 +77,7 @@ def _apply_courier(db: Session, c: Courier, body: CourierIn) -> None:
     vtype, model, kg, litres = TRANSPORT[body.transport]
     v = db.get(Vehicle, c.current_vehicle_id) if c.current_vehicle_id else None
     if v is None:
-        v = Vehicle(plate=None, type=vtype, model=model)
+        v = Vehicle(plate=None, type=vtype, model=model, tenant_id=c.tenant_id)
         db.add(v)
     v.type, v.model = vtype, model
     v.capacity_kg = body.capacity_kg if body.capacity_kg is not None else kg
@@ -86,36 +87,32 @@ def _apply_courier(db: Session, c: Courier, body: CourierIn) -> None:
 
 
 @router.post("/couriers", status_code=201)
-def create_courier(body: CourierIn, db: Session = Depends(get_db), user: User = Depends(require("fleet:manage"))):
-    c = Courier(full_name=body.first_name)
+def create_courier(body: CourierIn, db: Session = Depends(get_db), user: Principal = Depends(require("fleet:manage"))):
+    c = Courier(full_name=body.first_name, tenant_id=user.tenant_id)
     db.add(c)
     _apply_courier(db, c, body)
-    audit.record(db, actor_id=user.id, action="create", entity="courier", entity_id=c.id)
+    audit.record(db, actor_id=user.id, tenant_id=user.tenant_id, action="create", entity="courier", entity_id=c.id)
     db.commit()
     return _courier_view(c, db.get(Vehicle, c.current_vehicle_id))
 
 
 @router.put("/couriers/{courier_id}")
-def update_courier(courier_id: int, body: CourierIn, db: Session = Depends(get_db), user: User = Depends(require("fleet:manage"))):
-    c = db.get(Courier, courier_id)
-    if not c:
-        raise HTTPException(404, "Courier not found")
+def update_courier(courier_id: int, body: CourierIn, db: Session = Depends(get_db), user: Principal = Depends(require("fleet:manage"))):
+    c = get_owned(db, Courier, courier_id, user, "Courier")
     _apply_courier(db, c, body)
-    audit.record(db, actor_id=user.id, action="update", entity="courier", entity_id=c.id)
+    audit.record(db, actor_id=user.id, tenant_id=user.tenant_id, action="update", entity="courier", entity_id=c.id)
     db.commit()
     return _courier_view(c, db.get(Vehicle, c.current_vehicle_id))
 
 
 @router.post("/couriers/{courier_id}/consent")
-def grant_consent(courier_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+def grant_consent(courier_id: int, db: Session = Depends(get_db), user: Principal = Depends(current_user)):
     """A courier grants GPS tracking consent for themselves (admins may record it on their behalf)."""
-    c = db.get(Courier, courier_id)
-    if not c:
-        raise HTTPException(404, "Courier not found")
-    if user.role.name != Role.ADMIN and c.user_id != user.id:
+    c = get_owned(db, Courier, courier_id, user, "Courier")
+    if user.role.name not in (Role.ADMIN, Role.OWNER) and c.user_id != user.id:
         raise HTTPException(403, "Only the courier can grant consent")
     c.tracking_consent_at = datetime.now(timezone.utc)
-    audit.record(db, actor_id=user.id, action="gps_consent", entity="courier", entity_id=c.id)
+    audit.record(db, actor_id=user.id, tenant_id=user.tenant_id, action="gps_consent", entity="courier", entity_id=c.id)
     db.commit()
     return {"consent_at": c.tracking_consent_at}
 
@@ -150,10 +147,10 @@ def _refresh_demo(db: Session) -> None:
 
 @router.get("/couriers")
 def list_couriers(freshness: str | None = None, vehicle_type: str | None = None, zone: str | None = None,
-                  include_inactive: bool = False, db: Session = Depends(get_db), _: User = Depends(require("fleet:read"))):
+                  include_inactive: bool = False, db: Session = Depends(get_db), user: Principal = Depends(require("fleet:read"))):
     if settings.demo_mode:
         _refresh_demo(db)
-    q = select(Courier, Vehicle).outerjoin(Vehicle, Vehicle.id == Courier.current_vehicle_id)
+    q = select(Courier, Vehicle).outerjoin(Vehicle, Vehicle.id == Courier.current_vehicle_id).where(Courier.tenant_id == user.tenant_id)
     if not include_inactive:
         q = q.where(Courier.active)
     if vehicle_type:
@@ -196,14 +193,17 @@ def _validate(ev: LocationIn, now: datetime) -> str | None:
 
 @router.post("/locations")
 def ingest_locations(batch: LocationBatch, db: Session = Depends(get_db),
-                     user: User = Depends(require("gps:write"))):
+                     user: Principal = Depends(require("gps:write"))):
     """Idempotent, batch-capable (offline buffers). Returns per-event outcome; never silently drops."""
     now = datetime.now(timezone.utc)
     results, touched = [], {}
     for i, ev in enumerate(batch.events):
-        courier = touched.get(ev.courier_id) or db.get(Courier, ev.courier_id)
+        courier = touched.get(ev.courier_id) or find_owned(db, Courier, ev.courier_id, user)
         if not courier:
             results.append({"index": i, "status": "rejected", "reason": "unknown_courier"})
+            continue
+        if ev.vehicle_id is not None and find_owned(db, Vehicle, ev.vehicle_id, user) is None:
+            results.append({"index": i, "status": "rejected", "reason": "unknown_vehicle"})
             continue
         if user.role.name == Role.COURIER and courier.user_id != user.id:
             results.append({"index": i, "status": "rejected", "reason": "not_your_courier_id"})
@@ -239,7 +239,8 @@ def ingest_locations(batch: LocationBatch, db: Session = Depends(get_db),
 
 @router.get("/couriers/{courier_id}/history")
 def history(courier_id: int, since: datetime | None = None, limit: int = 500, db: Session = Depends(get_db),
-            _: User = Depends(require("fleet:read"))):
+            user: Principal = Depends(require("fleet:read"))):
+    get_owned(db, Courier, courier_id, user, "Courier")   # 404 for another company's courier
     q = select(LocationEvent).where(LocationEvent.courier_id == courier_id)
     if since:
         q = q.where(LocationEvent.recorded_at >= since)

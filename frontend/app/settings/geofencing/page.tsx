@@ -31,8 +31,9 @@ function EditorModal({ zone, zones, onClose }: { zone?: Zone; zones: Zone[]; onC
   const [color, setColor] = useState(zone?.color ?? COLORS[zones.length % COLORS.length]);
   const [points, setPoints] = useState<number[][]>(zone?.polygon ?? []);
   const [hidden, setHidden] = useState<number[]>([]);
+  const [priority, setPriority] = useState(zone?.priority ?? 0);
   const save = useMutation({
-    mutationFn: () => call(zone ? `/zones/${zone.id}` : "/zones", { method: zone ? "PUT" : "POST", body: JSON.stringify({ name, color, polygon: points, active: true }) }),
+    mutationFn: () => call(zone ? `/zones/${zone.id}` : "/zones", { method: zone ? "PUT" : "POST", body: JSON.stringify({ name, color, polygon: points, active: true, priority }) }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["zones"] }); onClose(); },
   });
   const others = zones.filter((z) => z.id !== zone?.id && !hidden.includes(z.id));
@@ -41,6 +42,7 @@ function EditorModal({ zone, zones, onClose }: { zone?: Zone; zones: Zone[]; onC
       <div className="space-y-3">
         <div className="flex flex-wrap items-end gap-3">
           <div className="w-64"><Field label={t("zone_name")}><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} /></Field></div>
+          <div className="w-32"><Field label={t("zone_priority")}><input className={inputCls} type="number" min={0} max={100} value={priority} onChange={(e) => setPriority(Number(e.target.value))} /></Field></div>
           <Field label={t("color")}>
             <span className="flex gap-1.5">{COLORS.map((c) => <button type="button" key={c} aria-label={c} onClick={() => setColor(c)} className={`h-8 w-8 rounded-full border-2 ${color === c ? "border-ink" : "border-white shadow"}`} style={{ background: c }} />)}</span>
           </Field>

@@ -4,18 +4,19 @@ import { useState } from "react";
 import { Button, Card, ErrorText, Field, Modal, inputCls } from "@/components/ui";
 import { can, useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
-import type { RoleInfo, UserRow } from "@/lib/types";
+import type { Branch, RoleInfo, UserRow } from "@/lib/types";
 
-type Draft = { email: string; password: string; role: string; full_name: string };
+type Draft = { email: string; password: string; role: string; full_name: string; branch_ids: number[] };
 
 function UserModal({ user, roles, onClose }: { user?: UserRow; roles: RoleInfo[]; onClose: () => void }) {
   const { call } = useAuth();
   const { t } = useT();
   const qc = useQueryClient();
-  const [d, setD] = useState<Draft>({ email: user?.email ?? "", password: "", role: user?.role ?? "dispatcher", full_name: user?.full_name ?? "" });
+  const branches = useQuery({ queryKey: ["branches"], queryFn: () => call<Branch[]>("/branches") });
+  const [d, setD] = useState<Draft>({ email: user?.email ?? "", password: "", role: user?.role ?? "dispatcher", full_name: user?.full_name ?? "", branch_ids: user?.branch_ids ?? [] });
   const save = useMutation({
     mutationFn: () => user
-      ? call(`/users/${user.id}`, { method: "PATCH", body: JSON.stringify({ role: d.role, full_name: d.full_name, ...(d.password ? { password: d.password } : {}) }) })
+      ? call(`/users/${user.id}`, { method: "PATCH", body: JSON.stringify({ role: d.role, full_name: d.full_name, branch_ids: d.branch_ids, ...(d.password ? { password: d.password } : {}) }) })
       : call("/users", { method: "POST", body: JSON.stringify(d) }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["users"] }); onClose(); },
   });
@@ -27,7 +28,9 @@ function UserModal({ user, roles, onClose }: { user?: UserRow; roles: RoleInfo[]
         <Field label={t("role")} hint={roles.find((r) => r.name === d.role)?.description}>
           <select className={inputCls} value={d.role} onChange={(e) => setD({ ...d, role: e.target.value })}>{roles.map((r) => <option key={r.name} value={r.name}>{r.name}</option>)}</select>
         </Field>
-        <Field label={user ? t("reset_password") : t("password")} hint={user ? t("users_note") : "min 8"}>
+        {d.role === "branch_operator" && (
+          <Field group label={t("branches_for")}><span className="flex flex-wrap gap-3">{(branches.data ?? []).map((b) => <label key={b.id} className="flex items-center gap-1.5 text-sm"><input type="checkbox" checked={d.branch_ids.includes(b.id)} onChange={() => setD({ ...d, branch_ids: d.branch_ids.includes(b.id) ? d.branch_ids.filter((x) => x !== b.id) : [...d.branch_ids, b.id] })} />{b.name}</label>)}</span></Field>)}
+        <Field label={user ? t("reset_password") : t("password")} hint={user ? t("users_note") : t("must_change_body")}>
           <input className={inputCls} type="password" autoComplete="new-password" minLength={8} required={!user} value={d.password} onChange={(e) => setD({ ...d, password: e.target.value })} />
         </Field>
         <ErrorText error={save.error} />
@@ -65,7 +68,7 @@ export default function Page() {
             {(users.data ?? []).map((u) => (
               <tr key={u.id} className="border-b last:border-0">
                 <td className="p-3">{u.full_name || "—"}</td><td>{u.email}</td>
-                <td><span className="rounded-full bg-surface2 px-2 py-0.5 text-xs">{u.role}</span></td>
+                <td><span className="rounded-full bg-surface2 px-2 py-0.5 text-xs">{u.role}</span>{u.support_access && <span className="ml-2 rounded bg-brand-light px-1.5 text-[10px] text-brand-text">{t("support_badge")}</span>}</td>
                 <td><span className={u.is_active ? "text-green-700" : "text-muted"}>{u.is_active ? t("active") : t("inactive")}</span></td>
                 <td className="space-x-2 pr-3 text-right">
                   <Button variant="ghost" onClick={() => setModal({ user: u })}>{t("edit")}</Button>

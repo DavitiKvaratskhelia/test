@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button, ErrorText } from "@/components/ui";
 import { api } from "@/lib/api";
+import { applyBrand } from "@/lib/brand";
 import { useT } from "@/lib/i18n";
 
 const AddressPicker = dynamic(() => import("@/components/AddressPicker"), { ssr: false, loading: () => <div className="h-[55vh] animate-pulse rounded-2xl bg-surface2" /> });
@@ -16,12 +17,13 @@ export default function PinPage() {
   useEffect(() => { try { if (!localStorage.getItem("lang")) setLang("ka", false); } catch {} }, []);  // eslint-disable-line react-hooks/exhaustive-deps
   const [pt, setPt] = useState<{ lat: number; lon: number } | null>(null);
   const [sent, setSent] = useState(false);
-  const info = useQuery({ queryKey: ["pin", token], queryFn: () => api<{ company: string; submitted: boolean; lat: number | null; lon: number | null }>(`/public/pin/${token}`), retry: false });
+  const info = useQuery({ queryKey: ["pin", token], queryFn: () => api<{ company: string; brand_color: string; logo_text: string; submitted: boolean; lat: number | null; lon: number | null }>(`/public/pin/${token}`), retry: false });
   useEffect(() => { if (info.data?.lat != null && info.data.lon != null && !pt) setPt({ lat: info.data.lat, lon: info.data.lon }); }, [info.data]);  // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { applyBrand(info.data?.brand_color); }, [info.data?.brand_color]);
   const send = useMutation({ mutationFn: () => api(`/public/pin/${token}`, undefined, { method: "POST", body: JSON.stringify(pt) }), onSuccess: () => setSent(true) });
   return (
     <main className="mx-auto min-h-screen max-w-lg space-y-4 bg-app p-5">
-      <header className="flex items-center justify-between"><span className="flex items-center gap-2 text-lg font-semibold"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand font-bold text-brand-on">Z</span>{info.data?.company ?? "Zoommer"}</span>
+      <header className="flex items-center justify-between"><span className="flex items-center gap-2 text-lg font-semibold"><span className="flex h-9 min-w-9 items-center justify-center rounded-xl bg-brand px-1 font-bold text-brand-on">{info.data?.logo_text ?? "Z"}</span>{info.data?.company ?? ""}</span>
         <button className="h-9 rounded-xl border px-2.5 text-xs" onClick={() => setLang(lang === "en" ? "ka" : "en")}>{lang === "en" ? "ქართ" : "EN"}</button></header>
       {info.error ? <div role="alert" className="rounded-2xl border p-6 text-center text-sm">{t("pub_invalid")}</div> : (
         <>
