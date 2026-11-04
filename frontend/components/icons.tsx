@@ -48,5 +48,4 @@ export const IconScooter = I(<><circle cx="6" cy="17" r="2.6" /><circle cx="18" 
 export const IconVan = I(<><path d="M2 7h12l4 4h4v6H2z" /><circle cx="7" cy="17.5" r="1.8" /><circle cx="17" cy="17.5" r="1.8" /></>);
 export const IconCar = I(<><path d="M4 16v-4l2-5h12l2 5v4zM4 16h16" /><circle cx="7.5" cy="16.5" r="1.6" /><circle cx="16.5" cy="16.5" r="1.6" /></>);
 export const IconTruckBig = I(<><path d="M2 5h12v11H2zM14 9h4l4 3v4h-8z" /><circle cx="6" cy="18" r="1.8" /><circle cx="17" cy="18" r="1.8" /></>);
-export const IconTruck = I(<><path d="M3 6h11v10H3zM14 9h4l3 3v4h-7" /><circle cx="7.5" cy="17.5" r="1.8" /><circle cx="17.5" cy="17.5" r="1.8" /></>);
 export const IconUserCheck = I(<><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5 1.5 0 2.8.4 3.9 1.1M16 17l2 2 4-4" /></>);
