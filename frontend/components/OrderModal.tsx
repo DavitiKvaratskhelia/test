@@ -118,12 +118,37 @@ export default function OrderModal({ orderId, onClose }: { orderId: number; onCl
                 <section>
                   <div className="mb-2 flex items-center justify-between"><h3 className="font-semibold">{t("order_status")}</h3>
                     <button onClick={openTracking} className="inline-flex items-center gap-1 rounded-lg bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700 hover:bg-sky-100 dark:bg-sky-500/15 dark:text-sky-300">{t("tracking_link")}<IconExternal className="!h-3.5 !w-3.5" /></button></div>
-                  <ol className="space-y-4 rounded-2xl border bg-surface p-4">
-                    {steps.map((s) => (
-                      <li key={s.key} className={`flex items-start gap-3 text-sm ${s.done ? "" : "text-muted"}`}>
-                        <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${s.bad ? "border-red-500 bg-red-500 text-white" : s.done ? "border-ink bg-ink text-app" : "border-line"}`}>{s.done ? <IconCheck className="!h-3.5 !w-3.5" /> : null}</span>
-                        <span><span className="block font-semibold">{s.label}</span>{s.at && <span className="block text-xs text-muted">{fmt(s.at)}</span>}{s.sub && <span className="block text-xs text-red-600">{s.sub}</span>}</span>
-                      </li>))}
+                  <ol className="rounded-2xl border bg-surface p-5">
+                    {(() => {
+                      const cur = steps.findIndex((x) => !x.done);
+                      return steps.map((s, i) => {
+                        const last = i === steps.length - 1;
+                        const isCur = i === cur;
+                        // line below this dot: solid brand while the next step is reached, fading into grey toward the current step
+                        const lineCls = i < cur - 1 ? "bg-brand" : i === cur - 1 ? "bg-gradient-to-b from-brand to-line" : "bg-line";
+                        return (
+                          <li key={s.key} className="relative flex gap-4 pb-6 last:pb-0">
+                            {!last && <span aria-hidden className={`absolute left-[11px] top-6 h-[calc(100%-1.5rem)] w-0.5 ${lineCls}`} />}
+                            <span className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center">
+                              {s.bad ? (
+                                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white"><IconCheck className="!h-3.5 !w-3.5" /></span>
+                              ) : s.done ? (
+                                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand text-white ring-4 ring-brand-light"><IconCheck className="!h-3.5 !w-3.5" /></span>
+                              ) : isCur ? (
+                                <span className="h-6 w-6 rounded-full border-[5px] border-brand bg-surface" />
+                              ) : (
+                                <span className="h-3 w-3 rounded-full bg-line" />
+                              )}
+                            </span>
+                            <span className={`text-sm ${s.done || isCur ? "" : "text-muted"}`}>
+                              <span className="block font-semibold leading-6">{s.label}</span>
+                              {s.at && <span className="block text-xs text-muted">{fmt(s.at)}</span>}
+                              {s.sub && <span className="block text-xs text-red-600">{s.sub}</span>}
+                            </span>
+                          </li>
+                        );
+                      });
+                    })()}
                   </ol>
                 </section>
               </div>
