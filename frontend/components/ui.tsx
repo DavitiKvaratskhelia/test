@@ -47,14 +47,17 @@ export function Modal({ title, onClose, children, wide = false }: { title: strin
 }
 
 const TONE = {
+  orange: "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-400/40 dark:bg-orange-500/15 dark:text-orange-300",
   blue: "border-sky-300 bg-sky-50 text-sky-700 dark:border-sky-500/40 dark:bg-sky-500/15 dark:text-sky-300",
+  indigo: "border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-400/40 dark:bg-indigo-500/15 dark:text-indigo-300",
+  violet: "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-400/40 dark:bg-violet-500/15 dark:text-violet-300",
   yellow: "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300",
   green: "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300",
   red: "border-red-300 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300",
   gray: "border-line bg-surface2 text-muted",
 };
 const STATUS_TONE: Record<string, keyof typeof TONE> = {
-  new: "yellow", ready: "yellow", assigned: "blue", picked_up: "blue", delivered: "green", failed: "red", returned: "yellow", cancelled: "gray",
+  new: "gray", ready: "orange", assigned: "blue", picked_up: "indigo", on_the_way: "violet", delivered: "green", failed: "red", returned: "yellow", cancelled: "gray",
 };
 
 /** Bordered status chip (reference style): in transit = blue, upcoming = yellow, delivered = green. */

@@ -26,6 +26,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [logout]);
 
   useEffect(() => {
+    const h = () => { try { const t = sessionStorage.getItem("tok"); if (t) api<Me>("/auth/me", t).then(setMe).catch(() => {}); } catch {} };
+    window.addEventListener("profile-changed", h);
+    return () => window.removeEventListener("profile-changed", h);
+  }, []);
+
+  useEffect(() => {
     let t: string | null = null;
     try { t = sessionStorage.getItem("tok"); } catch {}
     (t ? load(t) : Promise.resolve()).finally(() => setReady(true));

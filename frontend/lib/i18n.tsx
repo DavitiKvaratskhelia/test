@@ -12,7 +12,7 @@ const D = {
     gps: "GPS", zone: "Zone", vehicle: "Vehicle", cars: "Cars", scooters: "Scooters", never: "never reported",
     realtime: "Realtime", delayed: "Delayed", offline: "Offline", unknown: "No signal yet", last_known: "Last known position — not current",
     status: "Status", courier: "Courier", age: "Age", zones: "Zones", show_zones: "Show zones",
-    st_new: "New", st_ready: "Ready", st_assigned: "Assigned", st_picked_up: "Delivering", st_delivered: "Delivered",
+    st_new: "Draft", st_ready: "Ready for pick up", st_assigned: "Assigned", st_picked_up: "Picked up", st_delivered: "Delivered",
     st_failed: "Failed", st_returned: "Returned", st_cancelled: "Cancelled",
     set_account: "Account", set_addresses: "Saved Addresses", set_delivery: "Delivery Parameters", set_payment: "Payment Parameters",
     set_geofencing: "Geofencing", set_geolocation: "Geolocation", set_team: "Manage Your Team", parameters: "Parameters",
@@ -52,6 +52,30 @@ const D = {
     tab_all: "All orders", order_info: "Order info", tracking: "Tracking", layers: "Layers", map_tab: "Map", add_order: "Add order",
     layer_orders: "Orders", created: "Created", pickup_loc: "Pickup location", delivery_loc: "Delivery location", copied: "Copied", copy_id: "Copy ID",
     guide_line: "Straight guide line, not a road route.",
+    st_on_the_way: "Delivering", get_pin: "Get The Pin", order_word: "Order", dispatched_orders: "Dispatched orders", pending_dispatch2: "Pending dispatch",
+    by_date: "By Date", today: "Today", yesterday: "Yesterday", last7: "Last 7 days", last30: "Last 30 days", all_time: "All time", area: "Area", by_courier: "By Courier",
+    order_details_id: "ORDER DETAILS ID:", order_created_at: "Order Created", message_customer: "Message customer", copy_link: "Copy link", link_copied: "Link copied",
+    assign: "Assign", change_courier: "Change", order_status: "Order Status", route: "Route", distance: "Distance", additional_comment: "Additional comment", change_status: "CHANGE STATUS",
+    sel_status: "Select new status", reason: "Reason", reason_required: "A reason is required", saved_ok: "Saved", tracking_link: "Tracking", straight_line: "Straight-line distance, not a road route.",
+    tl_placed: "Order Placed", tl_assigned: "Assigned to courier", tl_picked: "Picked Up", tl_way: "On the way", tl_delivered: "Delivered", tl_failed: "Failed",
+    col_price: "Price", col_route: "Route", col_distance: "Distance", col_status: "Status", col_created: "Creation Date", col_courier: "Courier", col_id: "ID",
+    all_orders: "All Orders", conflict_reload: "Reload", no_courier_gps: "No GPS yet", pick_courier: "Choose courier", too_heavy_short: "Too heavy",
+    couriers_title: "Couriers", add_courier: "ADD COURIER", edit_courier: "Edit Courier", add_courier_title: "Add Courier", transport_type: "Transport Type", first_name: "Name", last_name: "Last Name",
+    email_opt: "Email (Optional)", transport_volume: "Transport capacity", courier_status: "courier status", active_u: "ACTIVE", inactive_u: "INACTIVE", online: "Online", map_toggle: "map",
+    tr_pedestrian: "Pedestrian", tr_bicycle: "Bicycle", tr_scooter: "Scooter", tr_combo: "Combo", tr_car: "Car", tr_truck: "Truck", last_gps: "LAST GPS UPDATE", transport: "Transport",
+    deliveries_per_courier: "Deliveries per courier", in_progress: "In progress", delivered_n: "Delivered", failed_n: "Failed",
+    pin_title: "Get The Pin", pin_intro: "Send this link to the customer. They open it on their phone and drop a pin on their exact location.", pin_create: "Create link", pin_copy: "Copy link",
+    pin_pending: "Waiting for customer", pin_done: "Pin received", pin_expired: "Expired", pin_revoked: "Revoked", pin_use: "Use in order", pin_expires: "Expires",
+    pub_status: "Status", pub_courier: "Courier", pub_address: "Delivery address", pub_invalid: "This link is not valid any more.", pub_updated: "Updated", pub_live: "Courier position (live)",
+    pin_page_title: "Show us where to deliver", pin_page_hint: "Tap the map to place the pin on your entrance.", pin_confirm: "Confirm location", pin_thanks: "Thank you! Your location was sent.", pin_change: "You can still move the pin and confirm again.",
+    my_account: "My Account", tab_profile: "Profile", tab_billing: "Billing", tab_transactions: "Transactions", tab_payment_methods: "Payment Methods", company_name: "Company Name",
+    company_email: "Email", company_phone: "Phone Number", admin_name: "Admin Name", password_label: "Password", edit_btn: "Edit", current_password: "Current password", new_password: "New password",
+    not_built_title: "Not built yet", not_built_body: "This part belongs to a later stage (see docs/PLAN.md). Nothing here is simulated.",
+    set_integration: "Integration", set_terms: "Terms and conditions of use", set_courier_terms: "Courier Terms and Conditions", not_connected_status: "Not connected",
+    terms_pending: "The text will appear here once the business approves it. Versioning and acceptance records arrive with the SaaS stage.",
+    upload_sheet: "Upload a spreadsheet", import_soon: "Import arrives in the next stage", continue_btn: "CREATE ORDER", assign_couriers_h: "ASSIGN COURIERS",
+    need_car: "need a car", place_order_h: "PLACE AN ORDER", more_menu: "More", cancel_order: "Cancel order", open_details: "Open details", no_gps_time: "never",
+    transport_note: "Capacity defaults are demo assumptions; adjust per courier.", search_ph: "search", status_all: "Status", transport_all: "Transport",
     order_created: "Order created", pin_dropped: "Pin", dark_mode: "Dark mode", light_mode: "Light mode", gps_stale: "GPS not live",
   },
   ka: {
@@ -62,7 +86,7 @@ const D = {
     gps: "GPS", zone: "ზონა", vehicle: "ტრანსპორტი", cars: "მანქანები", scooters: "სკუტერები", never: "არასდროს გამოცხადებულა",
     realtime: "რეალურ დროში", delayed: "დაგვიანებული", offline: "გათიშული", unknown: "სიგნალი ჯერ არ ყოფილა", last_known: "ბოლო ცნობილი პოზიცია — არა მიმდინარე",
     status: "სტატუსი", courier: "კურიერი", age: "ასაკი", zones: "ზონები", show_zones: "ზონების ჩვენება",
-    st_new: "ახალი", st_ready: "მზადაა", st_assigned: "მინიჭებული", st_picked_up: "იგზავნება", st_delivered: "ჩაბარებული",
+    st_new: "დრაფტი", st_ready: "მზადაა აღებისთვის", st_assigned: "მინიჭებული", st_picked_up: "აღებულია", st_delivered: "ჩაბარებული",
     st_failed: "ჩავარდნილი", st_returned: "დაბრუნებული", st_cancelled: "გაუქმებული",
     set_account: "ანგარიში", set_addresses: "დამახსოვრებული მისამართები", set_delivery: "მიტანის პარამეტრები", set_payment: "გადახდის პარამეტრები",
     set_geofencing: "გეოზონები", set_geolocation: "გეოლოკაცია", set_team: "გუნდის მართვა", parameters: "პარამეტრები",
@@ -102,18 +126,43 @@ const D = {
     tab_all: "ყველა", order_info: "შეკვეთის ინფო", tracking: "თვალყური", layers: "ფენები", map_tab: "რუკა", add_order: "შეკვეთის დამატება",
     layer_orders: "შეკვეთები", created: "შეიქმნა", pickup_loc: "აყვანის ადგილი", delivery_loc: "მიტანის ადგილი", copied: "დაკოპირდა", copy_id: "ID-ის კოპირება",
     guide_line: "პირდაპირი ხაზია და არა გზის მარშრუტი.",
+    st_on_the_way: "გზაშია", get_pin: "პინის მიღება", order_word: "შეკვეთა", dispatched_orders: "განაწილებული შეკვეთები", pending_dispatch2: "გასანაწილებელი",
+    by_date: "თარიღით", today: "დღეს", yesterday: "გუშინ", last7: "ბოლო 7 დღე", last30: "ბოლო 30 დღე", all_time: "მთელი დრო", area: "ზონა", by_courier: "კურიერით",
+    order_details_id: "შეკვეთის დეტალები ID:", order_created_at: "შეკვეთა შეიქმნა", message_customer: "მომხმარებლისთვის შეტყობინება", copy_link: "ბმულის კოპირება", link_copied: "ბმული დაკოპირდა",
+    assign: "მინიჭება", change_courier: "შეცვლა", order_status: "შეკვეთის სტატუსი", route: "მარშრუტი", distance: "მანძილი", additional_comment: "დამატებითი კომენტარი", change_status: "სტატუსის შეცვლა",
+    sel_status: "აირჩიეთ ახალი სტატუსი", reason: "მიზეზი", reason_required: "მიზეზი სავალდებულოა", saved_ok: "შენახულია", tracking_link: "თრექინგი", straight_line: "პირდაპირი ხაზის მანძილია და არა გზის მარშრუტი.",
+    tl_placed: "შეკვეთა მიღებულია", tl_assigned: "კურიერზე მინიჭებულია", tl_picked: "აღებულია", tl_way: "გზაშია", tl_delivered: "ჩაბარდა", tl_failed: "ჩავარდა",
+    col_price: "ფასი", col_route: "მარშრუტი", col_distance: "მანძილი", col_status: "სტატუსი", col_created: "შექმნის თარიღი", col_courier: "კურიერი", col_id: "ID",
+    all_orders: "ყველა შეკვეთა", conflict_reload: "გადატვირთვა", no_courier_gps: "GPS ჯერ არ არის", pick_courier: "აირჩიეთ კურიერი", too_heavy_short: "ძალიან მძიმეა",
+    couriers_title: "კურიერები", add_courier: "კურიერის დამატება", edit_courier: "კურიერის რედაქტირება", add_courier_title: "კურიერის დამატება", transport_type: "ტრანსპორტის ტიპი", first_name: "სახელი", last_name: "გვარი",
+    email_opt: "ელფოსტა (არასავალდებულო)", transport_volume: "ტრანსპორტის ტევადობა", courier_status: "კურიერის სტატუსი", active_u: "აქტიური", inactive_u: "გამორთული", online: "ონლაინ", map_toggle: "რუკა",
+    tr_pedestrian: "ფეხით", tr_bicycle: "ველოსიპედი", tr_scooter: "სკუტერი", tr_combo: "კომბო", tr_car: "მსუბუქი მანქანა", tr_truck: "სატვირთო", last_gps: "ბოლო GPS", transport: "ტრანსპორტი",
+    deliveries_per_courier: "მიტანები კურიერის მიხედვით", in_progress: "მიმდინარე", delivered_n: "ჩაბარებული", failed_n: "ჩავარდნილი",
+    pin_title: "პინის მიღება", pin_intro: "გაუგზავნეთ ეს ბმული მომხმარებელს. ის ტელეფონზე გახსნის და ზუსტ ადგილას დასვამს პინს.", pin_create: "ბმულის შექმნა", pin_copy: "ბმულის კოპირება",
+    pin_pending: "მომხმარებელს ველოდებით", pin_done: "პინი მიღებულია", pin_expired: "ვადა გაუვიდა", pin_revoked: "გაუქმებულია", pin_use: "შეკვეთაში გამოყენება", pin_expires: "ვადა",
+    pub_status: "სტატუსი", pub_courier: "კურიერი", pub_address: "მიტანის მისამართი", pub_invalid: "ეს ბმული აღარ მოქმედებს.", pub_updated: "განახლდა", pub_live: "კურიერის პოზიცია (ცოცხლად)",
+    pin_page_title: "აჩვენეთ სად მოგიტანოთ", pin_page_hint: "დააკაკუნეთ რუკაზე და პინი სადარბაზოსთან დასვით.", pin_confirm: "ადგილის დადასტურება", pin_thanks: "გმადლობთ! თქვენი ადგილი გაიგზავნა.", pin_change: "პინის გადაადგილება და ხელახლა დადასტურება კვლავ შეგიძლიათ.",
+    my_account: "ჩემი ანგარიში", tab_profile: "პროფილი", tab_billing: "ბილინგი", tab_transactions: "ტრანზაქციები", tab_payment_methods: "გადახდის მეთოდები", company_name: "კომპანიის სახელი",
+    company_email: "ელფოსტა", company_phone: "ტელეფონი", admin_name: "ადმინისტრატორის სახელი", password_label: "პაროლი", edit_btn: "რედაქტირება", current_password: "მიმდინარე პაროლი", new_password: "ახალი პაროლი",
+    not_built_title: "ჯერ არ არის აგებული", not_built_body: "ეს ნაწილი მომდევნო ეტაპზეა (იხ. docs/PLAN.md). აქ არაფერია სიმულირებული.",
+    set_integration: "ინტეგრაცია", set_terms: "გამოყენების პირობები", set_courier_terms: "კურიერის პირობები", not_connected_status: "დაკავშირებული არ არის",
+    terms_pending: "ტექსტი აქ გამოჩნდება ბიზნესის დამტკიცების შემდეგ. ვერსიები და თანხმობის ჩანაწერები SaaS-ის ეტაპზე დაემატება.",
+    upload_sheet: "ცხრილის ატვირთვა", import_soon: "იმპორტი მომდევნო ეტაპზეა", continue_btn: "შეკვეთის შექმნა", assign_couriers_h: "კურიერის მიმაგრება",
+    need_car: "მანქანა მჭირდება", place_order_h: "შეკვეთის დამატება", more_menu: "მეტი", cancel_order: "შეკვეთის გაუქმება", open_details: "დეტალები", no_gps_time: "არასდროს",
+    transport_note: "ტევადობის ნაგულისხმევი მნიშვნელობები დემო ვარაუდებია, კურიერზე შეცვალეთ.", search_ph: "ძებნა", status_all: "სტატუსი", transport_all: "ტრანსპორტი",
     order_created: "შეკვეთა შეიქმნა", pin_dropped: "პინი", dark_mode: "მუქი რეჟიმი", light_mode: "ნათელი რეჟიმი", gps_stale: "GPS არ არის ცოცხალი",
   },
 } as const;
 
 export type Key = keyof typeof D["en"];
-type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: (k: Key, vars?: Record<string, string | number>) => string };
+type Ctx = { lang: Lang; setLang: (l: Lang, persist?: boolean) => void; t: (k: Key, vars?: Record<string, string | number>) => string };
 const I18n = createContext<Ctx>({ lang: "en", setLang: () => {}, t: (k) => k });
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>("en");
   useEffect(() => { try { const l = localStorage.getItem("lang"); if (l === "ka" || l === "en") setLangState(l); } catch {} }, []);
-  const setLang = (l: Lang) => { setLangState(l); try { localStorage.setItem("lang", l); } catch {} };
+  // persist=false: apply a default for this page only (public customer pages) without overwriting the operator's saved choice
+  const setLang = (l: Lang, persist = true) => { setLangState(l); if (persist) { try { localStorage.setItem("lang", l); } catch {} } };
   const t: Ctx["t"] = (k, vars) => {
     let s: string = D[lang][k] ?? D.en[k] ?? k;
     if (vars) for (const [n, v] of Object.entries(vars)) s = s.replace(`{${n}}`, String(v));

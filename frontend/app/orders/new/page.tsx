@@ -2,7 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AddressField from "@/components/AddressField";
 import AppShell from "@/components/AppShell";
 import { Button, ErrorText, Field, inputCls } from "@/components/ui";
@@ -31,6 +31,14 @@ function NewOrder() {
   const [courierId, setCourierId] = useState<number | null>(null);
   const [clientKey] = useState(() => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now())).replace(/-/g, "").slice(0, 24));
 
+  // "Get The Pin": ?pin=<id> pre-fills the delivery point with the customer's own pin
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("pin");
+    if (!id) return;
+    call<{ lat: number | null; lon: number | null }>(`/pins/${id}`).then((p) => {
+      if (p.lat != null && p.lon != null) { setTo((x) => ({ ...x, lat: p.lat, lon: p.lon, text: x.text || `${t("pin_dropped")} ${p.lat!.toFixed(5)}, ${p.lon!.toFixed(5)}` })); setActive("to"); }
+    }).catch(() => {});
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
   const couriers = useQuery({ queryKey: ["couriers"], queryFn: () => call<Courier[]>("/fleet/couriers") });
   const kg = Number(weight) || 0;
   const list = useMemo(() => (couriers.data ?? []).filter((c) => !carsOnly || c.vehicle_type === "car"), [couriers.data, carsOnly]);
@@ -57,8 +65,12 @@ function NewOrder() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 px-5 pb-5 lg:flex-row">
       <section className="flex w-full flex-col gap-5 lg:w-[520px] lg:shrink-0 lg:overflow-y-auto lg:pr-1">
-        <div className="flex items-center justify-end">
-          <button aria-label={t("close")} onClick={() => router.push("/")} className="rounded-full border p-2 text-muted hover:bg-surface2">✕</button>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-xl font-extrabold uppercase tracking-wide">{t("place_order_h")}</h1>
+          <div className="flex items-center gap-2">
+            <button disabled title={t("import_soon")} className="flex h-10 cursor-not-allowed items-center gap-2 rounded-full border px-4 text-sm text-muted opacity-70">{t("upload_sheet")}</button>
+            <button aria-label={t("close")} onClick={() => router.push("/")} className="flex h-10 w-10 items-center justify-center rounded-full border text-muted hover:bg-surface2">✕</button>
+          </div>
         </div>
 
         <div className="grid gap-2 rounded-2xl border bg-surface p-2 sm:grid-cols-2">
@@ -83,7 +95,7 @@ function NewOrder() {
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">{t("assign_title")}</h2>
+            <h2 className="text-lg font-extrabold uppercase tracking-wide">{t("assign_couriers_h")}</h2>
             <button type="button" className="text-sm text-muted underline" onClick={() => create.mutate(null)} disabled={!from.text.trim() || !to.text.trim() || create.isPending}>{t("choose_later")}</button>
           </div>
           <div className="overflow-hidden rounded-2xl border bg-surface">
@@ -93,7 +105,8 @@ function NewOrder() {
                   <button key={k} onClick={() => setTab(k)} className={`rounded-full px-3 py-1 ${tab === k ? "bg-brand font-semibold text-brand-on" : "text-muted hover:bg-line"}`}>{t(k === "inhouse" ? "in_house" : "external")}</button>
                 ))}
               </div>
-              {tab === "inhouse" && <label className="flex items-center gap-2 text-xs text-muted">{t("cars_only")}<input type="checkbox" checked={carsOnly} onChange={(e) => setCarsOnly(e.target.checked)} /></label>}
+              {tab === "inhouse" && <label className="flex items-center gap-2 text-xs text-muted">{t("need_car")}
+                <button type="button" role="switch" aria-checked={carsOnly} aria-label={t("need_car")} onClick={() => setCarsOnly(!carsOnly)} className={`h-6 w-10 rounded-full p-0.5 transition ${carsOnly ? "bg-solo" : "bg-line"}`}><i className={`block h-5 w-5 rounded-full bg-white transition ${carsOnly ? "translate-x-4" : ""}`} /></button></label>}
             </div>
             {tab === "external" ? (
               <div className="space-y-1 p-3">
@@ -130,7 +143,7 @@ function NewOrder() {
         </div>
 
         <ErrorText error={create.error} />
-        <Button className="h-12 w-full" disabled={!canSubmit} onClick={() => create.mutate(courierId)}>{t("create_order")}</Button>
+        <Button className="h-12 w-full" disabled={!canSubmit} onClick={() => create.mutate(courierId)}>{t("continue_btn")}</Button>
       </section>
       <section className="min-h-[360px] flex-1 overflow-hidden rounded-2xl border"><OrderMap from={pt(from)} to={pt(to)} onPick={pick} /></section>
     </div>
@@ -140,5 +153,5 @@ function NewOrder() {
 export default function Page() {
   const { me } = useAuth();
   const { t } = useT();
-  return <AppShell title={t("place_order")} fullHeight>{can.createOrder(me?.role) ? <NewOrder /> : null}</AppShell>;
+  return <AppShell fullHeight>{can.createOrder(me?.role) ? <NewOrder /> : null}</AppShell>;
 }

@@ -10,7 +10,7 @@ function Clicks({ onPick }: { onPick: (lat: number, lon: number) => void }) {
 
 export default function AddressPicker({ value, onPick }: { value: { lat: number; lon: number } | null; onPick: (lat: number, lon: number) => void }) {
   return (
-    <MapContainer center={value ? [value.lat, value.lon] : TBILISI} zoom={value ? 15 : 11} className="h-56 w-full rounded-xl" style={{ cursor: "crosshair" }}>
+    <MapContainer center={value ? [value.lat, value.lon] : TBILISI} zoom={value ? 15 : 11} className="h-full min-h-56 w-full" style={{ cursor: "crosshair" }}>
       <TileLayer attribution={TILE_ATTRIBUTION} url={TILE_URL} maxZoom={19} />
       <Clicks onPick={onPick} />
       {value && <CircleMarker center={[value.lat, value.lon]} radius={8} pathOptions={{ color: "#fff", weight: 3, fillColor: "#F26A1B", fillOpacity: 1 }} />}

@@ -7,8 +7,7 @@
   --ink: 20 20 24; --muted: 112 115 124;
   --brand: 242 106 27; --brand-hover: 201 82 14; --brand-text: 176 68 8; --brand-light: 255 241 232;
   --on-brand: 23 23 28;                                /* dark text on the orange accent (better contrast than white) */
-  --solo: 20 33 61; --solo-hover: 31 48 87;            /* PLACEHOLDER dark brand navy: buttons */
-  --side: 20 33 61;                                    /* PLACEHOLDER dark brand navy: sidebar */
+  --solo: 31 32 36; --solo-hover: 52 54 60;            /* dark action colour (charcoal), replaces the reference's black */
   --chart: 232 93 4;                                   /* validated vs white surface (dataviz validator) */
   color-scheme: light;
 }
@@ -19,7 +18,6 @@
   --brand: 255 138 61; --brand-hover: 255 156 90; --brand-text: 255 170 110; --brand-light: 58 36 24;
   --on-brand: 23 23 28;
   --solo: 62 96 168; --solo-hover: 80 116 190;
-  --side: 15 23 41;
   --chart: 232 101 26;                                 /* validated vs #0F1729 surface */
   color-scheme: dark;
 }

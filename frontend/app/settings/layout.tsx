@@ -3,16 +3,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { can, useAuth } from "@/lib/auth";
-import { useT, Key } from "@/lib/i18n";
+import { Key, useT } from "@/lib/i18n";
 
 const ITEMS: { href: string; key: Key; icon: string; visible?: (r?: string) => boolean }[] = [
   { href: "/settings/account", key: "set_account", icon: "👤" },
   { href: "/settings/addresses", key: "set_addresses", icon: "📍", visible: can.addresses },
-  { href: "/settings/delivery", key: "set_delivery", icon: "📦" },
   { href: "/settings/payment", key: "set_payment", icon: "💳" },
+  { href: "/settings/delivery", key: "set_delivery", icon: "📦" },
   { href: "/settings/geofencing", key: "set_geofencing", icon: "🗺️", visible: can.fleet },
   { href: "/settings/geolocation", key: "set_geolocation", icon: "🌐" },
   { href: "/settings/team", key: "set_team", icon: "👥", visible: can.manageUsers },
+  { href: "/settings/integration", key: "set_integration", icon: "🧩" },
+  { href: "/settings/terms", key: "set_terms", icon: "📄" },
+  { href: "/settings/courier-terms", key: "set_courier_terms", icon: "📑" },
 ];
 
 function Sidebar() {
@@ -20,26 +23,24 @@ function Sidebar() {
   const { t } = useT();
   const path = usePathname();
   return (
-    <aside className="w-full shrink-0 border-b bg-surface md:w-60 md:border-b-0 md:border-r">
-      <h2 className="px-5 pb-2 pt-1 text-xs font-semibold uppercase tracking-wide text-muted">{t("parameters")}</h2>
-      <nav className="flex gap-1 overflow-x-auto px-2 pb-2 md:flex-col md:overflow-visible md:pb-0">
+    <aside className="w-full shrink-0 border-b bg-app md:w-72 md:border-b-0 md:border-r">
+      <h2 className="px-6 py-5 text-lg font-bold">{t("parameters")}</h2>
+      <nav className="flex gap-1 overflow-x-auto pb-2 md:flex-col md:overflow-visible md:pb-0">
         {ITEMS.filter((i) => !i.visible || i.visible(me?.role)).map((i) => (
-          <Link key={i.href} href={i.href} className={`flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm ${path === i.href ? "bg-brand font-medium text-brand-on" : "text-ink hover:bg-surface2"}`}>
-            <span aria-hidden>{i.icon}</span>{t(i.key)}
-          </Link>
-        ))}
+          <Link key={i.href} href={i.href} className={`flex items-center gap-3 whitespace-nowrap border-l-4 px-6 py-3.5 text-sm ${path === i.href ? "border-ink bg-surface font-semibold" : "border-transparent text-ink hover:bg-surface"}`}>
+            <span aria-hidden className="w-5 text-center">{i.icon}</span>{t(i.key)}
+          </Link>))}
       </nav>
     </aside>
   );
 }
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
-  const { t } = useT();
   return (
-    <AppShell title={t("nav_settings")}>
+    <AppShell>
       <div className="flex min-h-full flex-col md:flex-row">
         <Sidebar />
-        <div className="min-w-0 flex-1 px-5 pb-8 pt-2">{children}</div>
+        <div className="min-w-0 flex-1 px-6 pb-10 pt-6 md:px-10">{children}</div>
       </div>
     </AppShell>
   );
