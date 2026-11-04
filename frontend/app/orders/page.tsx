@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import AppShell from "@/components/AppShell";
 import { IconCalendar, IconCircle, IconCopy, IconDots, IconDownload, IconExternal, IconPin, IconPlus, IconRefresh, IconSearch, IconSort, IconUser } from "@/components/icons";
-import { Avatar, Pagination } from "@/components/kit";
+import { Avatar, OrderProgress, Pagination } from "@/components/kit";
 import OrderModal from "@/components/OrderModal";
 import { IconButton, StatusBadge, inputCls } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
@@ -79,10 +79,10 @@ function History() {
       <div className="overflow-x-auto rounded-2xl border bg-surface">
         <table className="w-full min-w-[960px] text-left text-sm">
           <thead className="text-xs text-ink"><tr>
-            <Th label={t("col_id")} /><Th label={t("col_route")} /><Th k="distance" label={t("col_distance")} /><Th k="price" label={t("col_price")} /><Th k="status" label={t("col_status")} /><Th k="created" label={t("col_created")} /><Th k="courier" label={t("col_courier")} /><th className="w-10" />
+            <Th label={t("col_id")} /><Th label={t("col_route")} /><Th k="distance" label={t("col_distance")} /><Th k="price" label={t("col_price")} /><Th label={t("col_events")} /><Th k="status" label={t("col_status")} /><Th k="created" label={t("col_created")} /><Th k="courier" label={t("col_courier")} /><th className="w-10" />
           </tr></thead>
           <tbody className="bg-app">
-            {isLoading && <tr><td colSpan={8} className="p-5 text-muted">{t("loading")}</td></tr>}
+            {isLoading && <tr><td colSpan={9} className="p-5 text-muted">{t("loading")}</td></tr>}
             {shown.map((o) => (
               <tr key={o.id} onClick={() => setOpen(o.id)} className="cursor-pointer border-t hover:bg-surface">
                 <td className="px-3 py-4 align-top"><div className="flex items-center gap-1.5 font-medium">#{o.external_id}<IconCopy className="!h-3.5 !w-3.5 text-muted" /></div>
@@ -92,13 +92,14 @@ function History() {
                   <div className="flex items-center gap-2"><IconCircle className="!h-4 !w-4 shrink-0 text-muted" /><span className="max-w-[300px] truncate">{o.delivery_address}</span></div></div></td>
                 <td className="px-3 py-4 font-medium" title={t("straight_line")}>{o.distance_m != null ? `${(o.distance_m / 1000).toFixed(2)} km` : "—"}</td>
                 <td className="px-3 py-4 font-medium">{o.price != null ? o.price.toFixed(2) : "—"}</td>
+                <td className="px-3 py-4"><OrderProgress status={o.status} /></td>
                 <td className="px-3 py-4"><StatusBadge status={o.status} /></td>
                 <td className="px-3 py-4 text-xs"><div className="font-medium">{o.created_at ? new Date(o.created_at).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric" }) : ""}</div><div className="text-muted">{o.created_at ? new Date(o.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}</div></td>
                 <td className="px-3 py-4">{o.courier_name ? <span className="flex items-center gap-2"><Avatar name={o.courier_name} size={28} /><span className="max-w-[140px] truncate">{o.courier_name}</span></span>
                   : <span className="inline-flex items-center gap-1.5 rounded-xl bg-solo px-4 py-2 text-xs font-medium text-white"><IconPlus className="!h-3.5 !w-3.5" />{t("assign")}</span>}</td>
                 <td className="px-3 py-4 text-muted"><IconDots /></td>
               </tr>))}
-            {!isLoading && shown.length === 0 && <tr><td colSpan={8} className="p-5 text-muted">{t("no_orders")}</td></tr>}
+            {!isLoading && shown.length === 0 && <tr><td colSpan={9} className="p-5 text-muted">{t("no_orders")}</td></tr>}
           </tbody>
         </table>
       </div>

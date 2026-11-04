@@ -1,5 +1,6 @@
 "use client";
 import { Button } from "./ui";
+import { IconBox, IconPin, IconTruck, IconUserCheck } from "./icons";
 
 export function KpiCard({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: number | string; sub?: string }) {
   return (
@@ -32,6 +33,28 @@ export function Pagination({ page, pages, onPage }: { page: number; pages: numbe
           className={`h-9 w-9 rounded-full text-sm ${n === page ? "bg-solo font-medium text-white" : "text-muted hover:bg-surface2"}`}>{n + 1}</button>
       ))}
       <Button variant="secondary" className="!px-3" disabled={page + 1 >= pages} onClick={() => onPage(page + 1)} aria-label="next">›</Button>
+    </div>
+  );
+}
+
+/** 4-stage progress strip (ready → assigned → on the way → delivered), like a shipment-event column. */
+export function OrderProgress({ status }: { status: string }) {
+  const reached: Record<string, number> = { new: 0, ready: 1, assigned: 2, picked_up: 3, on_the_way: 3, delivered: 4, failed: 3, returned: 3, cancelled: 0 };
+  const n = reached[status] ?? 0;
+  const bad = status === "failed" || status === "returned";
+  const icons = [IconBox, IconUserCheck, IconTruck, IconPin];
+  return (
+    <div className="flex items-center" role="img" aria-label={status}>
+      {icons.map((Ic, i) => {
+        const done = i < n;
+        const red = bad && i === n - 1;
+        return (
+          <div key={i} className="flex items-center">
+            {i > 0 && <span className={`h-0.5 w-5 ${i < n ? "bg-ink" : "bg-line"}`} />}
+            <span className={`flex h-7 w-7 items-center justify-center rounded-full ${red ? "bg-red-500 text-white" : done ? "bg-ink text-app" : "bg-surface2 text-muted"}`}><Ic className="!h-3.5 !w-3.5" /></span>
+          </div>
+        );
+      })}
     </div>
   );
 }
